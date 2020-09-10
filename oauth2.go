@@ -125,7 +125,7 @@ func (oa *OAuth2) GetToken(url string, hasRefreshToken bool) error {
 	fmt.Println(url)
 
 	httpClient := http.Client{}
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	req.Header.Add("Content-Type", "application/json")
 	//req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 	if err != nil {
@@ -149,7 +149,8 @@ func (oa *OAuth2) GetToken(url string, hasRefreshToken bool) error {
 	if res.StatusCode < 200 || res.StatusCode > 299 {
 		fmt.Println("GetTokenGUID:", guid)
 		fmt.Println("AccessToken:", oa.Token.AccessToken)
-		fmt.Println("Refresh:", oa.Token.RefreshToken)
+		fmt.Println("RefreshToken:", oa.Token.RefreshToken)
+		fmt.Println("ExpiresIn:", oa.Token.ExpiresIn)
 		fmt.Println("Expiry:", oa.Token.Expiry)
 		fmt.Println("Now:", time.Now())
 
@@ -206,11 +207,13 @@ func (oa *OAuth2) GetToken(url string, hasRefreshToken bool) error {
 		}
 	}
 
-	fmt.Println("new token:")
+	fmt.Println("new AccessToken:")
 	fmt.Println(oa.Token.AccessToken)
-	fmt.Println("new refresh token:")
+	fmt.Println("new RefreshToken:")
 	fmt.Println(oa.Token.RefreshToken)
-	fmt.Println("new expiry:")
+	fmt.Println("new ExpiresIn:")
+	fmt.Println(oa.Token.ExpiresIn)
+	fmt.Println("new Expiry:")
 	fmt.Println(oa.Token.Expiry)
 	fmt.Println("GetTokenGUID:", guid)
 
