@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	tableRefreshToken string = "leapforce.refreshtokens"
+	tableRefreshToken string = "leapforce.oauth2"
 )
 
 // OAuth2 stores OAuth2 configuration
@@ -379,9 +379,9 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 	ctx := context.Background()
 
 	//sql := "SELECT refreshtoken AS RefreshToken FROM `" + tableRefreshToken + "` WHERE client_id = '" + oa.ClientID + "'"
-	sql := fmt.Sprintf("SELECT refreshtoken AS RefreshToken FROM `%s` WHERE api = '%s' AND client_id = '%s'", tableRefreshToken, oa.apiName, oa.clientID)
+	sql := fmt.Sprintf("SELECT TokenType, AccessToken, RefreshToken, Expiry, Scope FROM `%s` WHERE Api = '%s' AND ClientID = '%s'", tableRefreshToken, oa.apiName, oa.clientID)
 
-	//fmt.Println(sql)
+	fmt.Println(sql)
 
 	q := bqClient.Query(sql)
 	it, err := q.Read(ctx)
@@ -403,16 +403,20 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 		break
 	}
 
-	if oa.Token == nil {
-		oa.Token = new(Token)
-	}
+	oa.Token = token
 
-	tokenType := "bearer"
-	oa.Token.TokenType = &tokenType
-	expiry := time.Now().Add(-10 * time.Second)
-	oa.Token.Expiry = &expiry
-	oa.Token.RefreshToken = token.RefreshToken
-	oa.Token.AccessToken = nil
+	oa.Token.Print()
+	/*
+		if oa.Token == nil {
+			oa.Token = new(Token)
+		}
+
+		//tokenType := "bearer"
+		//oa.Token.TokenType = &tokenType
+		//expiry := time.Now().Add(-10 * time.Second)
+		//oa.Token.Expiry = &expiry
+		oa.Token.RefreshToken = token.RefreshToken
+		oa.Token.AccessToken = nil*/
 
 	return nil
 }
@@ -427,8 +431,48 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 
 	ctx := context.Background()
 
+	tokenType := "NULL"
+	if oa.Token.TokenType != nil {
+		if *oa.Token.TokenType != "" {
+			tokenType = fmt.Sprintf("'%s'", *oa.Token.TokenType)
+		}
+	}
+
+	accessToken := "NULL"
+	if oa.Token.AccessToken != nil {
+		if *oa.Token.AccessToken != "" {
+			accessToken = fmt.Sprintf("'%s'", *oa.Token.AccessToken)
+		}
+	}
+
+	refreshToken := "NULL"
+	if oa.Token.RefreshToken != nil {
+		if *oa.Token.RefreshToken != "" {
+			refreshToken = fmt.Sprintf("'%s'", *oa.Token.RefreshToken)
+		}
+	}
+
+	expiry := "NULL"
+	if oa.Token.Expiry != nil {
+		expiry = fmt.Sprintf("'%s'", *oa.Token.Expiry)
+	}
+
+	scope := "NULL"
+	if oa.Token.Scope != nil {
+		if *oa.Token.Scope != "" {
+			scope = fmt.Sprintf("'%s'", *oa.Token.Scope)
+		}
+	}
+
 	sql := "MERGE `" + tableRefreshToken + "` AS TARGET " +
-		"USING  (SELECT '" + oa.apiName + "' AS api,'" + oa.clientID + "' AS client_id,'" + *oa.Token.RefreshToken + "' AS refreshtoken) AS SOURCE " +
+		"USING  (SELECT '" +
+		oa.apiName + "' AS Api,'" +
+		oa.clientID + "' AS ClientID," +
+		tokenType + " AS TokenType," +
+		accessToken + " AS AccessToken," +
+		refreshToken + " AS RefreshToken," +
+		expiry + " AS Expiry," +
+		scope + " AS Scope) AS SOURCE " +
 		" ON TARGET.api = SOURCE.api " +
 		" AND TARGET.client_id = SOURCE.client_id " +
 		"WHEN MATCHED THEN " +
@@ -439,6 +483,7 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 		"	VALUES (SOURCE.api, SOURCE.client_id, SOURCE.refreshtoken)"
 
 	q := bqClient.Query(sql)
+	fmt.Println(sql)
 
 	job, err := q.Run(ctx)
 	if err != nil {
