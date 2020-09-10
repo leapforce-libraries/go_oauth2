@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -30,7 +29,7 @@ type OAuth2 struct {
 	apiName         string
 	clientID        string
 	clientSecret    string
-	scopes          []string
+	scope           string
 	redirectURL     string
 	authURL         string
 	tokenURL        string
@@ -99,12 +98,12 @@ type ApiError struct {
 	Description string `json:"error_description,omitempty"`
 }
 
-func NewOAuth(apiName string, clientID string, clienSecret string, scopes []string, redirectURL string, authURL string, tokenURL string, tokenHttpMethod string, bigquery *bigquerytools.BigQuery, isLive bool) *OAuth2 {
+func NewOAuth(apiName string, clientID string, clienSecret string, scope string, redirectURL string, authURL string, tokenURL string, tokenHttpMethod string, bigquery *bigquerytools.BigQuery, isLive bool) *OAuth2 {
 	_oAuth2 := new(OAuth2)
 	_oAuth2.apiName = apiName
 	_oAuth2.clientID = clientID
 	_oAuth2.clientSecret = clienSecret
-	_oAuth2.scopes = scopes
+	_oAuth2.scope = scope
 	_oAuth2.redirectURL = redirectURL
 	_oAuth2.authURL = authURL
 	_oAuth2.tokenURL = tokenURL
@@ -339,9 +338,7 @@ func (oa *OAuth2) initToken() error {
 		return &types.ErrorString{fmt.Sprintf("%s variable not initialized", oa.apiName)}
 	}
 
-	scope := strings.Join(oa.scopes, ",")
-
-	url2 := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", oa.authURL, oa.clientID, url.PathEscape(oa.redirectURL), url.PathEscape(scope))
+	url2 := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", oa.authURL, oa.clientID, url.PathEscape(oa.redirectURL), url.PathEscape(oa.scope))
 
 	fmt.Println("Go to this url to get new access token:\n")
 	fmt.Println(url2 + "\n")
