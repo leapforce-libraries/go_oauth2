@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -203,9 +204,9 @@ func (oa *OAuth2) GetToken(url string, hasRefreshToken bool) error {
 
 func (oa *OAuth2) getTokenFromCode(code string) error {
 	//fmt.Println("getTokenFromCode")
-	url := fmt.Sprintf("%s?code=%s&redirect_uri=%s&client_id=%s&client_secret=%s&scope=&grant_type=authorization_code", oa.tokenURL, code, oa.redirectURL, oa.clientID, oa.clientSecret)
+	url2 := fmt.Sprintf("%s?code=%s&redirect_uri=%s&client_id=%s&client_secret=%s&scope=&grant_type=authorization_code", oa.tokenURL, code, oa.redirectURL, oa.clientID, oa.clientSecret)
 	//fmt.Println("getTokenFromCode", url)
-	return oa.GetToken(url, true)
+	return oa.GetToken(url.PathEscape(url2), true)
 }
 
 func (oa *OAuth2) getTokenFromRefreshToken() error {
@@ -218,9 +219,9 @@ func (oa *OAuth2) getTokenFromRefreshToken() error {
 		return oa.initToken()
 	}
 
-	url := fmt.Sprintf("%s?client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token&access_type=offline&prompt=consent", oa.tokenURL, oa.clientID, oa.clientSecret, oa.Token.RefreshToken)
+	url2 := fmt.Sprintf("%s?client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token&access_type=offline&prompt=consent", oa.tokenURL, oa.clientID, oa.clientSecret, oa.Token.RefreshToken)
 	//fmt.Println("getTokenFromRefreshToken", url)
-	return oa.GetToken(url, false)
+	return oa.GetToken(url.PathEscape(url2), false)
 }
 
 // ValidateToken validates current token and retrieves a new one if necessary
@@ -271,10 +272,10 @@ func (oa *OAuth2) initToken() error {
 
 	scope := strings.Join(oa.scopes, ",")
 
-	url := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", oa.authURL, oa.clientID, oa.redirectURL, scope)
+	url2 := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", oa.authURL, oa.clientID, oa.redirectURL, scope)
 
 	fmt.Println("Go to this url to get new access token:\n")
-	fmt.Println(url + "\n")
+	fmt.Println(url.PathEscape(url2) + "\n")
 
 	// Create a new redirect route
 	http.HandleFunc("/oauth/redirect", func(w http.ResponseWriter, r *http.Request) {
