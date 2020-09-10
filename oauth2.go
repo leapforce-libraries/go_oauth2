@@ -273,7 +273,7 @@ func (oa *OAuth2) GetToken(url string) error {
 
 func (oa *OAuth2) getTokenFromCode(code string) error {
 	//fmt.Println("getTokenFromCode")
-	url2 := fmt.Sprintf("%s?code=%s&redirect_uri=%s&client_id=%s&client_secret=%s&scope=&grant_type=authorization_code", oa.tokenURL, code, url.QueryEscape(oa.redirectURL), oa.clientID, oa.clientSecret)
+	url2 := fmt.Sprintf("%s?code=%s&redirect_uri=%s&client_id=%s&client_secret=%s&scope=&grant_type=authorization_code", oa.tokenURL, code, url.PathEscape(oa.redirectURL), oa.clientID, oa.clientSecret)
 	//fmt.Println("getTokenFromCode", url)
 	return oa.GetToken(url2)
 }
@@ -341,7 +341,7 @@ func (oa *OAuth2) initToken() error {
 
 	scope := strings.Join(oa.scopes, ",")
 
-	url2 := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", oa.authURL, oa.clientID, url.QueryEscape(oa.redirectURL), url.QueryEscape(scope))
+	url2 := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", oa.authURL, oa.clientID, url.PathEscape(oa.redirectURL), url.PathEscape(scope))
 
 	fmt.Println("Go to this url to get new access token:\n")
 	fmt.Println(url2 + "\n")
@@ -386,10 +386,8 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 
 	ctx := context.Background()
 
-	//sql := "SELECT refreshtoken AS RefreshToken FROM `" + tableRefreshToken + "` WHERE client_id = '" + oa.ClientID + "'"
 	sql := fmt.Sprintf("SELECT TokenType, AccessToken, RefreshToken, Expiry, Scope FROM `%s` WHERE Api = '%s' AND ClientID = '%s'", tableRefreshToken, oa.apiName, oa.clientID)
-
-	fmt.Println(sql)
+	//fmt.Println(sql)
 
 	q := bqClient.Query(sql)
 	it, err := q.Read(ctx)
@@ -495,7 +493,7 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 		"	VALUES (SOURCE.Api, SOURCE.ClientID, SOURCE.TokenType, SOURCE.AccessToken, SOURCE.RefreshToken, SOURCE.Expiry, SOURCE.Scope)"
 
 	q := bqClient.Query(sql)
-	fmt.Println(sql)
+	//fmt.Println(sql)
 
 	job, err := q.Run(ctx)
 	if err != nil {
