@@ -39,7 +39,7 @@ func (oa *OAuth2) Get(url string, model interface{}) error {
 	oa.LockToken()
 
 	// Add authorization token to header
-	var bearer = "Bearer " + oa.Token.AccessToken
+	var bearer = "Bearer " + *oa.Token.AccessToken
 	req.Header.Add("Authorization", bearer)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
@@ -103,7 +103,7 @@ func (oa *OAuth2) PostBuffer(url string, buf *bytes.Buffer, model interface{}) e
 	oa.LockToken()
 
 	// Add authorization token to header
-	var bearer = "Bearer " + oa.Token.AccessToken
+	var bearer = "Bearer " + *oa.Token.AccessToken
 	req.Header.Add("Authorization", bearer)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")

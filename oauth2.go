@@ -42,12 +42,12 @@ type OAuth2 struct {
 var tokenMutex sync.Mutex
 
 type Token struct {
-	AccessToken  string `json:"access_token"`
-	Scope        string `json:"scope"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int64  `json:"expires_in"`
-	RefreshToken string `json:"refresh_token"`
-	Expiry       time.Time
+	AccessToken  *string `json:"access_token"`
+	Scope        *string `json:"scope"`
+	TokenType    *string `json:"token_type"`
+	ExpiresIn    *int64  `json:"expires_in"`
+	RefreshToken *string `json:"refresh_token"`
+	Expiry       *time.Time
 }
 
 type ApiError struct {
@@ -83,8 +83,15 @@ func (t *Token) Useable() bool {
 	if t == nil {
 		return false
 	}
-	if t.AccessToken == "" || t.RefreshToken == "" {
+	if t.AccessToken == nil {
 		return false
+	}
+	if *t.AccessToken == "" {
+		if t.RefreshToken == nil {
+			return false
+		} else if *t.RefreshToken == "" {
+			return false
+		}
 	}
 	return true
 }
@@ -93,7 +100,10 @@ func (t *Token) Refreshable() bool {
 	if t == nil {
 		return false
 	}
-	if t.RefreshToken == "" {
+	if t.RefreshToken == nil {
+		return false
+	}
+	if *t.RefreshToken == "" {
 		return false
 	}
 	return true
@@ -173,7 +183,12 @@ func (oa *OAuth2) GetToken(url string, hasRefreshToken bool) error {
 
 	fmt.Println(token)
 
-	token.Expiry = time.Now().Add(time.Duration(token.ExpiresIn) * time.Second)
+	if token.ExpiresIn != nil {
+		expiry := time.Now().Add(time.Duration(*token.ExpiresIn) * time.Second)
+		token.Expiry = &expiry
+	} else {
+		token.Expiry = nil
+	}
 
 	if oa.Token == nil {
 		oa.Token = &Token{}
@@ -346,10 +361,12 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 		oa.Token = new(Token)
 	}
 
-	oa.Token.TokenType = "bearer"
-	oa.Token.Expiry = time.Now().Add(-10 * time.Second)
+	tokenType := "bearer"
+	oa.Token.TokenType = &tokenType
+	expiry := time.Now().Add(-10 * time.Second)
+	oa.Token.Expiry = &expiry
 	oa.Token.RefreshToken = token.RefreshToken
-	oa.Token.AccessToken = ""
+	oa.Token.AccessToken = nil
 
 	return nil
 }
@@ -365,7 +382,7 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 	ctx := context.Background()
 
 	sql := "MERGE `" + tableRefreshToken + "` AS TARGET " +
-		"USING  (SELECT '" + oa.apiName + "' AS api,'" + oa.clientID + "' AS client_id,'" + oa.Token.RefreshToken + "' AS refreshtoken) AS SOURCE " +
+		"USING  (SELECT '" + oa.apiName + "' AS api,'" + oa.clientID + "' AS client_id,'" + *oa.Token.RefreshToken + "' AS refreshtoken) AS SOURCE " +
 		" ON TARGET.api = SOURCE.api " +
 		" AND TARGET.client_id = SOURCE.client_id " +
 		"WHEN MATCHED THEN " +
