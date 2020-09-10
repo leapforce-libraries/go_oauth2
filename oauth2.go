@@ -27,16 +27,17 @@ const (
 //
 type OAuth2 struct {
 	// config
-	apiName      string
-	clientID     string
-	clientSecret string
-	scopes       []string
-	redirectURL  string
-	authURL      string
-	tokenURL     string
-	Token        *Token
-	bigQuery     *bigquerytools.BigQuery
-	isLive       bool
+	apiName         string
+	clientID        string
+	clientSecret    string
+	scopes          []string
+	redirectURL     string
+	authURL         string
+	tokenURL        string
+	tokenHttpMethod string
+	Token           *Token
+	bigQuery        *bigquerytools.BigQuery
+	isLive          bool
 }
 
 var tokenMutex sync.Mutex
@@ -98,7 +99,7 @@ type ApiError struct {
 	Description string `json:"error_description,omitempty"`
 }
 
-func NewOAuth(apiName string, clientID string, clienSecret string, scopes []string, redirectURL string, authURL string, tokenURL string, bigquery *bigquerytools.BigQuery, isLive bool) *OAuth2 {
+func NewOAuth(apiName string, clientID string, clienSecret string, scopes []string, redirectURL string, authURL string, tokenURL string, tokenHttpMethod string, bigquery *bigquerytools.BigQuery, isLive bool) *OAuth2 {
 	_oAuth2 := new(OAuth2)
 	_oAuth2.apiName = apiName
 	_oAuth2.clientID = clientID
@@ -107,6 +108,7 @@ func NewOAuth(apiName string, clientID string, clienSecret string, scopes []stri
 	_oAuth2.redirectURL = redirectURL
 	_oAuth2.authURL = authURL
 	_oAuth2.tokenURL = tokenURL
+	_oAuth2.tokenHttpMethod = tokenHttpMethod
 	//_oAuth2.Token        *Token
 	_oAuth2.bigQuery = bigquery
 	_oAuth2.isLive = isLive
@@ -162,13 +164,13 @@ func (t *Token) IsExpired() (bool, error) {
 	return false, nil
 }
 
-func (oa *OAuth2) GetToken(url string, hasRefreshToken bool) error {
+func (oa *OAuth2) GetToken(url string) error {
 	guid := types.NewGUID()
 	fmt.Println("GetTokenGUID:", guid)
 	fmt.Println(url)
 
 	httpClient := http.Client{}
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(oa.tokenHttpMethod, url, nil)
 	req.Header.Add("Content-Type", "application/json")
 	//req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 	if err != nil {
@@ -234,20 +236,26 @@ func (oa *OAuth2) GetToken(url string, hasRefreshToken bool) error {
 
 	token.Print()
 
-	if oa.Token == nil {
-		oa.Token = &Token{}
-	}
-
-	oa.Token.Expiry = token.Expiry
-	oa.Token.AccessToken = token.AccessToken
-
-	if hasRefreshToken {
-		oa.Token.RefreshToken = token.RefreshToken
-
-		err = oa.saveTokenToBigQuery()
-		if err != nil {
-			return err
+	oa.Token = &token
+	/*
+		if oa.Token == nil {
+			oa.Token = &Token{}
 		}
+
+		oa.Token.Expiry = token.Expiry
+		oa.Token.AccessToken = token.AccessToken
+
+		if hasRefreshToken {
+			oa.Token.RefreshToken = token.RefreshToken
+
+			err = oa.saveTokenToBigQuery()
+			if err != nil {
+				return err
+			}
+		}*/
+	err = oa.saveTokenToBigQuery()
+	if err != nil {
+		return err
 	}
 
 	fmt.Println("new AccessToken:")
@@ -267,7 +275,7 @@ func (oa *OAuth2) getTokenFromCode(code string) error {
 	//fmt.Println("getTokenFromCode")
 	url2 := fmt.Sprintf("%s?code=%s&redirect_uri=%s&client_id=%s&client_secret=%s&scope=&grant_type=authorization_code", oa.tokenURL, code, url.QueryEscape(oa.redirectURL), oa.clientID, oa.clientSecret)
 	//fmt.Println("getTokenFromCode", url)
-	return oa.GetToken(url2, true)
+	return oa.GetToken(url2)
 }
 
 func (oa *OAuth2) getTokenFromRefreshToken() error {
@@ -282,7 +290,7 @@ func (oa *OAuth2) getTokenFromRefreshToken() error {
 
 	url2 := fmt.Sprintf("%s?client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token&access_type=offline&prompt=consent", oa.tokenURL, oa.clientID, oa.clientSecret, oa.Token.RefreshToken)
 	//fmt.Println("getTokenFromRefreshToken", url)
-	return oa.GetToken(url2, false)
+	return oa.GetToken(url2)
 }
 
 // ValidateToken validates current token and retrieves a new one if necessary
