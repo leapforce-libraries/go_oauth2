@@ -26,16 +26,16 @@ const (
 //
 type OAuth2 struct {
 	// config
-	ApiName      string
-	ClientID     string
-	ClientSecret string
-	Scopes       []string
-	RedirectURL  string
-	AuthURL      string
-	TokenURL     string
+	apiName      string
+	clientID     string
+	clientSecret string
+	scopes       []string
+	redirectURL  string
+	authURL      string
+	tokenURL     string
 	Token        *Token
-	BigQuery     *bigquerytools.BigQuery
-	IsLive       bool
+	bigQuery     *bigquerytools.BigQuery
+	isLive       bool
 }
 
 var tokenMutex sync.Mutex
@@ -52,6 +52,22 @@ type Token struct {
 type ApiError struct {
 	Error       string `json:"error"`
 	Description string `json:"error_description,omitempty"`
+}
+
+func NewOAuth(apiName string, clientID string, clienSecret string, scopes []string, redirectURL string, authURL string, tokenURL string, bigquery *bigquerytools.BigQuery, isLive bool) *OAuth2 {
+	_oAuth2 := new(OAuth2)
+	_oAuth2.apiName = apiName
+	_oAuth2.clientID = clientID
+	_oAuth2.clientSecret = clienSecret
+	_oAuth2.scopes = scopes
+	_oAuth2.redirectURL = redirectURL
+	_oAuth2.authURL = authURL
+	_oAuth2.tokenURL = tokenURL
+	//_oAuth2.Token        *Token
+	_oAuth2.bigQuery = bigquery
+	_oAuth2.isLive = isLive
+
+	return _oAuth2
 }
 
 func (oa *OAuth2) LockToken() {
@@ -137,8 +153,8 @@ func (oa *OAuth2) GetToken(url string, hasRefreshToken bool) error {
 		fmt.Println(message)
 
 		if res.StatusCode == 401 {
-			if oa.IsLive {
-				sentry.CaptureMessage(fmt.Sprintf("%s refreshtoken not valid, login needed to retrieve a new one. Error: %s", oa.ApiName, message))
+			if oa.isLive {
+				sentry.CaptureMessage(fmt.Sprintf("%s refreshtoken not valid, login needed to retrieve a new one. Error: %s", oa.apiName, message))
 			}
 			oa.initToken()
 		}
@@ -187,7 +203,7 @@ func (oa *OAuth2) GetToken(url string, hasRefreshToken bool) error {
 
 func (oa *OAuth2) getTokenFromCode(code string) error {
 	//fmt.Println("getTokenFromCode")
-	url := fmt.Sprintf("%s?code=%s&redirect_uri=%s&client_id=%s&client_secret=%s&scope=&grant_type=authorization_code", oa.TokenURL, code, oa.RedirectURL, oa.ClientID, oa.ClientSecret)
+	url := fmt.Sprintf("%s?code=%s&redirect_uri=%s&client_id=%s&client_secret=%s&scope=&grant_type=authorization_code", oa.tokenURL, code, oa.redirectURL, oa.clientID, oa.clientSecret)
 	//fmt.Println("getTokenFromCode", url)
 	return oa.GetToken(url, true)
 }
@@ -202,7 +218,7 @@ func (oa *OAuth2) getTokenFromRefreshToken() error {
 		return oa.initToken()
 	}
 
-	url := fmt.Sprintf("%s?client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token&access_type=offline&prompt=consent", oa.TokenURL, oa.ClientID, oa.ClientSecret, oa.Token.RefreshToken)
+	url := fmt.Sprintf("%s?client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token&access_type=offline&prompt=consent", oa.tokenURL, oa.clientID, oa.clientSecret, oa.Token.RefreshToken)
 	//fmt.Println("getTokenFromRefreshToken", url)
 	return oa.GetToken(url, false)
 }
@@ -221,7 +237,7 @@ func (oa *OAuth2) ValidateToken() error {
 		}
 
 		if !oa.Token.Useable() {
-			if oa.IsLive {
+			if oa.isLive {
 				sentry.CaptureMessage("Refreshtoken not found or empty, login needed to retrieve a new one.")
 			}
 			err := oa.initToken()
@@ -250,12 +266,12 @@ func (oa *OAuth2) ValidateToken() error {
 func (oa *OAuth2) initToken() error {
 
 	if oa == nil {
-		return &types.ErrorString{fmt.Sprintf("%s variable not initialized", oa.ApiName)}
+		return &types.ErrorString{fmt.Sprintf("%s variable not initialized", oa.apiName)}
 	}
 
-	scope := strings.Join(oa.Scopes, ",")
+	scope := strings.Join(oa.scopes, ",")
 
-	url := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", oa.AuthURL, oa.ClientID, oa.RedirectURL, scope)
+	url := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", oa.authURL, oa.clientID, oa.redirectURL, scope)
 
 	fmt.Println("Go to this url to get new access token:\n")
 	fmt.Println(url + "\n")
@@ -292,7 +308,7 @@ func (oa *OAuth2) initToken() error {
 func (oa *OAuth2) getTokenFromBigQuery() error {
 	fmt.Println("***getTokenFromBigQuery***")
 	// create client
-	bqClient, err := oa.BigQuery.CreateClient()
+	bqClient, err := oa.bigQuery.CreateClient()
 	if err != nil {
 		fmt.Println("\nerror in BigQueryCreateClient")
 		return err
@@ -301,7 +317,7 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 	ctx := context.Background()
 
 	//sql := "SELECT refreshtoken AS RefreshToken FROM `" + tableRefreshToken + "` WHERE client_id = '" + oa.ClientID + "'"
-	sql := fmt.Sprintf("SELECT refreshtoken AS RefreshToken FROM `%s` WHERE api = '%s' AND client_id = '%s'", tableRefreshToken, oa.ApiName, oa.ClientID)
+	sql := fmt.Sprintf("SELECT refreshtoken AS RefreshToken FROM `%s` WHERE api = '%s' AND client_id = '%s'", tableRefreshToken, oa.apiName, oa.clientID)
 
 	//fmt.Println(sql)
 
@@ -339,7 +355,7 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 
 func (oa *OAuth2) saveTokenToBigQuery() error {
 	// create client
-	bqClient, err := oa.BigQuery.CreateClient()
+	bqClient, err := oa.bigQuery.CreateClient()
 	if err != nil {
 		fmt.Println("\nerror in BigQueryCreateClient")
 		return err
@@ -348,7 +364,7 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 	ctx := context.Background()
 
 	sql := "MERGE `" + tableRefreshToken + "` AS TARGET " +
-		"USING  (SELECT '" + oa.ApiName + "' AS api,'" + oa.ClientID + "' AS client_id,'" + oa.Token.RefreshToken + "' AS refreshtoken) AS SOURCE " +
+		"USING  (SELECT '" + oa.apiName + "' AS api,'" + oa.clientID + "' AS client_id,'" + oa.Token.RefreshToken + "' AS refreshtoken) AS SOURCE " +
 		" ON TARGET.api = SOURCE.api " +
 		" AND TARGET.client_id = SOURCE.client_id " +
 		"WHEN MATCHED THEN " +
