@@ -272,7 +272,7 @@ func (oa *OAuth2) initToken() error {
 
 	scope := strings.Join(oa.scopes, ",")
 
-	url2 := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", url.QueryEscape(oa.authURL), oa.clientID, url.QueryEscape(oa.redirectURL), url.QueryEscape(scope))
+	url2 := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", oa.authURL, oa.clientID, url.QueryEscape(oa.redirectURL), url.QueryEscape(scope))
 
 	fmt.Println("Go to this url to get new access token:\n")
 	fmt.Println(url2 + "\n")
