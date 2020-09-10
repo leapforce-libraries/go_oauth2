@@ -481,14 +481,18 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 		refreshToken + " AS RefreshToken," +
 		expiry + " AS Expiry," +
 		scope + " AS Scope) AS SOURCE " +
-		" ON TARGET.api = SOURCE.api " +
-		" AND TARGET.client_id = SOURCE.client_id " +
+		" ON TARGET.Api = SOURCE.Api " +
+		" AND TARGET.ClientID = SOURCE.ClientID " +
 		"WHEN MATCHED THEN " +
 		"	UPDATE " +
-		"	SET refreshtoken = SOURCE.refreshtoken " +
+		"	SET TokenType = SOURCE.TokenType " +
+		"	, AccessToken = SOURCE.AccessToken " +
+		"	, RefreshToken = SOURCE.RefreshToken " +
+		"	, Expiry = SOURCE.Expiry " +
+		"	, Scope = SOURCE.Scope " +
 		"WHEN NOT MATCHED BY TARGET THEN " +
-		"	INSERT (api, client_id, refreshtoken) " +
-		"	VALUES (SOURCE.api, SOURCE.client_id, SOURCE.refreshtoken)"
+		"	INSERT (Api, ClientID, TokenType, AccessToken, RefreshToken, Expiry, Scope) " +
+		"	VALUES (SOURCE.Api, SOURCE.ClientID, SOURCE.TokenType, SOURCE.AccessToken, SOURCE.RefreshToken, SOURCE.Expiry, SOURCE.Scope)"
 
 	q := bqClient.Query(sql)
 	fmt.Println(sql)
