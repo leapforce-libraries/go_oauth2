@@ -50,6 +50,49 @@ type Token struct {
 	Expiry       *time.Time
 }
 
+func (t *Token) Print() {
+	if t == nil {
+		fmt.Println("Token: <nil>")
+		return
+	}
+
+	if t.AccessToken == nil {
+		fmt.Println("AccessToken: <nil>")
+	} else {
+		fmt.Println("AccessToken: ", *t.AccessToken)
+	}
+
+	if t.Scope == nil {
+		fmt.Println("Scope: <nil>")
+	} else {
+		fmt.Println("Scope: ", *t.Scope)
+	}
+
+	if t.TokenType == nil {
+		fmt.Println("TokenType: <nil>")
+	} else {
+		fmt.Println("TokenType: ", *t.TokenType)
+	}
+
+	if t.ExpiresIn == nil {
+		fmt.Println("ExpiresIn: <nil>")
+	} else {
+		fmt.Println("ExpiresIn: ", *t.ExpiresIn)
+	}
+
+	if t.RefreshToken == nil {
+		fmt.Println("RefreshToken: <nil>")
+	} else {
+		fmt.Println("RefreshToken: ", *t.RefreshToken)
+	}
+
+	if t.Expiry == nil {
+		fmt.Println("Expiry: <nil>")
+	} else {
+		fmt.Println("Expiry: ", *t.Expiry)
+	}
+}
+
 type ApiError struct {
 	Error       string `json:"error"`
 	Description string `json:"error_description,omitempty"`
@@ -161,7 +204,7 @@ func (oa *OAuth2) GetToken(url string, hasRefreshToken bool) error {
 			return err
 		}
 
-		message := fmt.Sprintln("Error:", eoError.Error, ", ", eoError.Description)
+		message := fmt.Sprintln("Error:", res.StatusCode, eoError.Error, ", ", eoError.Description)
 		fmt.Println(message)
 
 		if res.StatusCode == 401 {
@@ -182,14 +225,14 @@ func (oa *OAuth2) GetToken(url string, hasRefreshToken bool) error {
 		return err
 	}
 
-	fmt.Println(token)
-
 	if token.ExpiresIn != nil {
 		expiry := time.Now().Add(time.Duration(*token.ExpiresIn) * time.Second)
 		token.Expiry = &expiry
 	} else {
 		token.Expiry = nil
 	}
+
+	token.Print()
 
 	if oa.Token == nil {
 		oa.Token = &Token{}
