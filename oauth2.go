@@ -439,33 +439,33 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 
 	ctx := context.Background()
 
-	tokenType := "NULL"
+	tokenType := "NULLIF('','')"
 	if oa.Token.TokenType != nil {
 		if *oa.Token.TokenType != "" {
 			tokenType = fmt.Sprintf("'%s'", *oa.Token.TokenType)
 		}
 	}
 
-	accessToken := "NULL"
+	accessToken := "NULLIF('','')"
 	if oa.Token.AccessToken != nil {
 		if *oa.Token.AccessToken != "" {
 			accessToken = fmt.Sprintf("'%s'", *oa.Token.AccessToken)
 		}
 	}
 
-	refreshToken := "NULL"
+	refreshToken := "NULLIF('','')"
 	if oa.Token.RefreshToken != nil {
 		if *oa.Token.RefreshToken != "" {
 			refreshToken = fmt.Sprintf("'%s'", *oa.Token.RefreshToken)
 		}
 	}
 
-	expiry := "NULL"
+	expiry := "TIMESTAMP(NULL)"
 	if oa.Token.Expiry != nil {
-		expiry = fmt.Sprintf("'%s'", *oa.Token.Expiry)
+		expiry = fmt.Sprintf("TIMESTAMP('%s')", (*oa.Token.Expiry).Format("2006-01-02T15:04:05"))
 	}
 
-	scope := "NULL"
+	scope := "NULLIF('','')"
 	if oa.Token.Scope != nil {
 		if *oa.Token.Scope != "" {
 			scope = fmt.Sprintf("'%s'", *oa.Token.Scope)
@@ -489,7 +489,7 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 		"	, AccessToken = SOURCE.AccessToken " +
 		"	, RefreshToken = SOURCE.RefreshToken " +
 		"	, Expiry = SOURCE.Expiry " +
-		"	, Scope = SOURCE.Scope " +
+		"	, Scope = SOURCE.Scope	 " +
 		"WHEN NOT MATCHED BY TARGET THEN " +
 		"	INSERT (Api, ClientID, TokenType, AccessToken, RefreshToken, Expiry, Scope) " +
 		"	VALUES (SOURCE.Api, SOURCE.ClientID, SOURCE.TokenType, SOURCE.AccessToken, SOURCE.RefreshToken, SOURCE.Expiry, SOURCE.Scope)"
