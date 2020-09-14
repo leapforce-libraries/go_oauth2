@@ -89,9 +89,9 @@ func (t *Token) hasValidAccessToken() bool {
 		return true
 	}
 	if t.Expiry.Add(-60 * time.Second).Before(time.Now()) {
-		return true
+		return false
 	}
-	return false
+	return true
 }
 
 func (t *Token) hasRefreshToken() bool {
