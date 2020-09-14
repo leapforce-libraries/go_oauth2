@@ -14,6 +14,7 @@ import (
 // Get returns http.Response for generic oAuth2 Get http call
 //
 func (oa *OAuth2) Get(url string, model interface{}) (*http.Response, error) {
+	fmt.Println("GET ", url)
 	res, err := oa.httpRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -37,6 +38,7 @@ func (oa *OAuth2) Get(url string, model interface{}) (*http.Response, error) {
 // Post returns http.Response for generic oAuth2 Post http call
 //
 func (oa *OAuth2) Post(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
+	fmt.Println("POST ", url)
 	res, err := oa.httpRequest(http.MethodPost, url, buf)
 	if err != nil {
 		return nil, err
@@ -60,6 +62,7 @@ func (oa *OAuth2) Post(url string, buf *bytes.Buffer, model interface{}) (*http.
 // Put returns http.Response for generic oAuth2 Put http call
 //
 func (oa *OAuth2) Put(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
+	fmt.Println("PUT ", url)
 	res, err := oa.httpRequest(http.MethodPut, url, buf)
 	if err != nil {
 		return nil, err
@@ -83,6 +86,7 @@ func (oa *OAuth2) Put(url string, buf *bytes.Buffer, model interface{}) (*http.R
 // Delete returns http.Response for generic oAuth2 Delete http call
 //
 func (oa *OAuth2) Delete(url string) (*http.Response, error) {
+	fmt.Println("DELETE ", url)
 	res, err := oa.httpRequest(http.MethodDelete, url, nil)
 	if err != nil {
 		return nil, err

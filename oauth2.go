@@ -299,7 +299,7 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 	ctx := context.Background()
 
 	sql := fmt.Sprintf("SELECT TokenType, AccessToken, RefreshToken, Expiry, Scope FROM `%s` WHERE Api = '%s' AND ClientID = '%s'", tableRefreshToken, oa.apiName, oa.clientID)
-	//fmt.Println(sql)
+	fmt.Println(sql)
 
 	q := bqClient.Query(sql)
 	it, err := q.Read(ctx)
