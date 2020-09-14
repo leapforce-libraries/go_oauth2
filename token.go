@@ -46,12 +46,6 @@ func (t *Token) Print() {
 		fmt.Println("TokenType: ", *t.TokenType)
 	}
 
-	if t.ExpiresIn == nil {
-		fmt.Println("ExpiresIn: <nil>")
-	} else {
-		fmt.Println("ExpiresIn: ", *t.ExpiresIn)
-	}
-
 	if t.RefreshToken == nil {
 		fmt.Println("RefreshToken: <nil>")
 	} else {

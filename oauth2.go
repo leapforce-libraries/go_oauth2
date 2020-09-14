@@ -168,24 +168,24 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 	}
 
 	if token.ExpiresIn != nil {
-		var i int64
-		err := json.Unmarshal(*token.ExpiresIn, &i)
+		var expiresInInt int64
+		var expiresInString string
+		err := json.Unmarshal(*token.ExpiresIn, &expiresInInt)
 		if err != nil {
-			fmt.Println(err)
-		} else {
-			fmt.Println(i)
+			err = json.Unmarshal(*token.ExpiresIn, &expiresInString)
+
+			if err == nil {
+				expiresInInt, err = strconv.ParseInt(expiresInString, 10, 64)
+			}
 		}
-		//expiresIn := fmt.Sprintf("%v", *token.ExpiresIn)
-		//fmt.Println(*token.ExpiresIn)
-		//fmt.Println(expiresIn)
-		//expiresInString, err := strconv.ParseInt(expiresIn, 10, 64)
-		/*if err != nil {
-			token.Expiry = nil
-		} else {
-			//convert to UTC
-			expiry := time.Now().Add(time.Duration(expiresInString) * time.Second).In(oa.locationUTC)
-			token.Expiry = &expiry
-		}*/
+
+		if err != nil {
+			return &types.ErrorString{fmt.Sprintf("Cannot convert ExpiresIn %s to Int64.", fmt.Sprintf("%v", *token.ExpiresIn))}
+		}
+
+		//convert to UTC
+		expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(oa.locationUTC)
+		token.Expiry = &expiry
 	} else {
 		token.Expiry = nil
 	}
