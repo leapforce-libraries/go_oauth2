@@ -168,17 +168,24 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 	}
 
 	if token.ExpiresIn != nil {
-		expiresIn := fmt.Sprintf("%v", *token.ExpiresIn)
-		fmt.Println(*token.ExpiresIn)
-		fmt.Println(expiresIn)
-		expiresInString, err := strconv.ParseInt(expiresIn, 10, 64)
+		var i int64
+		err := json.Unmarshal(*token.ExpiresIn, &i)
 		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println(i)
+		}
+		//expiresIn := fmt.Sprintf("%v", *token.ExpiresIn)
+		//fmt.Println(*token.ExpiresIn)
+		//fmt.Println(expiresIn)
+		//expiresInString, err := strconv.ParseInt(expiresIn, 10, 64)
+		/*if err != nil {
 			token.Expiry = nil
 		} else {
 			//convert to UTC
 			expiry := time.Now().Add(time.Duration(expiresInString) * time.Second).In(oa.locationUTC)
 			token.Expiry = &expiry
-		}
+		}*/
 	} else {
 		token.Expiry = nil
 	}
