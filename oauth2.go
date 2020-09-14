@@ -253,7 +253,7 @@ func (oa *OAuth2) ValidateToken() error {
 }
 
 func (oa *OAuth2) initTokenNeeded() {
-	message := "No valid accesscode or refreshcode found. Manual login needed, lease run 'token' mode."
+	message := "No valid accesscode or refreshcode found. Manual login needed, please run 'token' mode."
 	fmt.Println(message)
 
 	err := &types.ErrorString{message}
