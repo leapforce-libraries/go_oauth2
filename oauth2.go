@@ -308,13 +308,16 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 	}
 
 	token := new(Token)
-
+	count := 0
 	for {
+		fmt.Println("count", count)
+		count++
 		err := it.Next(token)
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
+			fmt.Println(err)
 			return err
 		}
 
