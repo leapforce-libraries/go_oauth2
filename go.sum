@@ -48,6 +48,7 @@ github.com/Leapforce-nl/go_bigquerytools v0.0.0-20200906180830-62ef1ff748c5 h1:D
 github.com/Leapforce-nl/go_bigquerytools v0.0.0-20200906180830-62ef1ff748c5/go.mod h1:TQI3OkAtylNvDNxLwTDuF+mqrRt69YdpoOH/farM2n0=
 github.com/Leapforce-nl/go_bigquerytools v0.0.0-20200914144530-b1178cdc19f9 h1:BzVNNLL2h1TDalG8qmvirAZ739rB8VLdezglcP+TeK4=
 github.com/Leapforce-nl/go_bigquerytools v0.0.0-20200914144530-b1178cdc19f9/go.mod h1:TQI3OkAtylNvDNxLwTDuF+mqrRt69YdpoOH/farM2n0=
+github.com/Leapforce-nl/go_errortools v0.0.0-20200218173102-e74ff3d10089 h1:HkMVwjlII4vQUBFwHyeYSVNGad85Zk0UDoxMZUhNQuA=
 github.com/Leapforce-nl/go_errortools v0.0.0-20200218173102-e74ff3d10089/go.mod h1:goG+xW3RRxvv/HpoxmaTFMdH+a/YeiZseoGzL9RwBAE=
 github.com/Leapforce-nl/go_types v0.0.0-20200126202922-ba4900de15b8 h1:q0/mdn+TnZqBB439lOeuLPHPnQaVYCQL2B4BRLbCbuQ=
 github.com/Leapforce-nl/go_types v0.0.0-20200126202922-ba4900de15b8/go.mod h1:AuUJ0pyk3Xc6IgEuzCr5NvEl277YQwiIgJ12/SfmByI=

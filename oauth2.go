@@ -15,6 +15,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	bigquerytools "github.com/Leapforce-nl/go_bigquerytools"
+	errortools "github.com/Leapforce-nl/go_errortools"
 	types "github.com/Leapforce-nl/go_types"
 	"github.com/getsentry/sentry-go"
 	"google.golang.org/api/iterator"
@@ -141,7 +142,7 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 			if oa.isLive {
 				sentry.CaptureMessage(fmt.Sprintf("%s refreshtoken not valid, login needed to retrieve a new one. Error: %s", oa.apiName, message))
 			}
-			oa.initToken()
+			oa.initTokenNeeded()
 		}
 
 		return &types.ErrorString{fmt.Sprintf("Server returned statuscode %v, url: %s", res.StatusCode, request.URL)}
@@ -196,8 +197,8 @@ func (oa *OAuth2) getTokenFromRefreshToken() error {
 	//always get refresh token from BQ prior to using it
 	oa.getTokenFromBigQuery()
 
-	if !oa.token.refreshable() {
-		return oa.initToken()
+	if !oa.token.hasRefreshToken() {
+		oa.initTokenNeeded()
 	}
 
 	data := url.Values{}
@@ -215,40 +216,44 @@ func (oa *OAuth2) ValidateToken() error {
 	oa.lockToken()
 	defer oa.unlockToken()
 
-	if !oa.token.useable() {
+	if !oa.token.hasAccessToken() {
+		// retrieve AccessCode from BigQuery
+		err := oa.getTokenFromBigQuery()
+		if err != nil {
+			return err
+		}
+	}
 
+	if oa.token.hasValidAccessToken() {
+		return nil
+	}
+
+	if oa.token.hasRefreshToken() {
 		err := oa.getTokenFromRefreshToken()
 		if err != nil {
 			return err
 		}
 
-		if !oa.token.useable() {
-			if oa.isLive {
-				sentry.CaptureMessage("Refreshtoken not found or empty, login needed to retrieve a new one.")
-			}
-			err := oa.initToken()
-			if err != nil {
-				return err
-			}
-			//return &types.ErrorString{""}
+		if oa.token.hasValidAccessToken() {
+			return nil
 		}
 	}
 
-	isExpired, err := oa.token.isExpired()
-	if err != nil {
-		return err
-	}
-	if isExpired {
-		err = oa.getTokenFromRefreshToken()
-		if err != nil {
-			return err
-		}
-	}
+	oa.initTokenNeeded()
 
 	return nil
 }
 
-func (oa *OAuth2) initToken() error {
+func (oa *OAuth2) initTokenNeeded() {
+	message := "No valid accesscode or refreshcode found. Manual login needed, lease run 'token' mode."
+	fmt.Println(message)
+
+	err := &types.ErrorString{message}
+
+	errortools.FatalSentry(err, oa.isLive)
+}
+
+func (oa *OAuth2) InitToken() error {
 
 	if oa == nil {
 		return &types.ErrorString{fmt.Sprintf("%s variable not initialized", oa.apiName)}
@@ -300,7 +305,7 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 	ctx := context.Background()
 
 	sql := fmt.Sprintf("SELECT TokenType, AccessToken, RefreshToken, Expiry, Scope FROM `%s` WHERE Api = '%s' AND ClientID = '%s'", tableRefreshToken, oa.apiName, oa.clientID)
-	fmt.Println(sql)
+	//fmt.Println(sql)
 
 	q := bqClient.Query(sql)
 	it, err := q.Read(ctx)
@@ -317,10 +322,8 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 	}
 
 	tokenBQ := new(TokenBQ)
-	count := 0
+
 	for {
-		fmt.Println("count", count)
-		count++
 		err := it.Next(tokenBQ)
 		if err == iterator.Done {
 			break
@@ -332,8 +335,6 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 
 		break
 	}
-
-	fmt.Println(tokenBQ)
 
 	oa.token = &Token{
 		bigquerytools.NullStringToString(tokenBQ.AccessToken),

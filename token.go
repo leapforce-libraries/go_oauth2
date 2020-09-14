@@ -68,7 +68,7 @@ func (oa *OAuth2) unlockToken() {
 	tokenMutex.Unlock()
 }
 
-func (t *Token) useable() bool {
+func (t *Token) hasAccessToken() bool {
 	if t == nil {
 		return false
 	}
@@ -76,16 +76,25 @@ func (t *Token) useable() bool {
 		return false
 	}
 	if *t.AccessToken == "" {
-		if t.RefreshToken == nil {
-			return false
-		} else if *t.RefreshToken == "" {
-			return false
-		}
+		return false
 	}
 	return true
 }
 
-func (t *Token) refreshable() bool {
+func (t *Token) hasValidAccessToken() bool {
+	if !t.hasAccessToken() {
+		return false
+	}
+	if t.Expiry == nil {
+		return true
+	}
+	if t.Expiry.Add(-60 * time.Second).Before(time.Now()) {
+		return true
+	}
+	return false
+}
+
+func (t *Token) hasRefreshToken() bool {
 	if t == nil {
 		return false
 	}
@@ -99,7 +108,10 @@ func (t *Token) refreshable() bool {
 }
 
 func (t *Token) isExpired() (bool, error) {
-	if !t.useable() {
+	if t == nil {
+		return true, &types.ErrorString{"Token is nil."}
+	}
+	if !t.hasAccessToken() {
 		return true, &types.ErrorString{"Token is not valid."}
 	}
 	if t.Expiry.Add(-60 * time.Second).Before(time.Now()) {
