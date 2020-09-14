@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	bigquerytools "github.com/Leapforce-nl/go_bigquerytools"
@@ -63,20 +65,56 @@ func (oa *OAuth2) lockToken() {
 	tokenMutex.Lock()
 }
 
-func (oa *OAuth2) GetToken(url string) error {
-	httpClient := http.Client{}
-	req, err := http.NewRequest(oa.tokenHTTPMethod, url, nil)
-	req.Header.Add("Content-Type", "application/json")
-	if err != nil {
-		return err
+func (oa *OAuth2) GetToken(params *url.Values) error {
+	request := new(http.Request)
+
+	if oa.tokenHTTPMethod == http.MethodGet {
+		url := oa.tokenURL
+
+		index := 0
+		for key, value := range *params {
+			if index == 0 {
+				url = fmt.Sprintf("%s?%s=%s", url, key, value)
+			} else {
+				url = fmt.Sprintf("%s&%s=%s", url, key, value)
+			}
+			index++
+		}
+
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
+		if err != nil {
+			return err
+		}
+
+		request = req
+	} else if oa.tokenHTTPMethod == http.MethodPost {
+
+		encoded := ""
+		body := new(strings.Reader)
+		if params != nil {
+			encoded = params.Encode()
+			body = strings.NewReader(encoded)
+		}
+
+		req, err := http.NewRequest(http.MethodPost, oa.tokenURL, body)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Content-Length", strconv.Itoa(len(encoded)))
+		req.Header.Set("Accept", "application/json")
+		if err != nil {
+			return err
+		}
+
+		request = req
+	} else {
+		return &types.ErrorString{fmt.Sprintf("Invalid TokenHTTPMethod: %s", oa.tokenHTTPMethod)}
 	}
 
-	// We set this header since we want the response
-	// as JSON
-	req.Header.Set("Accept", "application/json")
+	httpClient := http.Client{}
 
 	// Send out the HTTP request
-	res, err := httpClient.Do(req)
+	res, err := httpClient.Do(request)
 	if err != nil {
 		return err
 	}
@@ -105,7 +143,7 @@ func (oa *OAuth2) GetToken(url string) error {
 			oa.initToken()
 		}
 
-		return &types.ErrorString{fmt.Sprintf("Server returned statuscode %v, url: %s", res.StatusCode, req.URL)}
+		return &types.ErrorString{fmt.Sprintf("Server returned statuscode %v, url: %s", res.StatusCode, request.URL)}
 	}
 
 	token := Token{}
@@ -136,10 +174,14 @@ func (oa *OAuth2) GetToken(url string) error {
 }
 
 func (oa *OAuth2) getTokenFromCode(code string) error {
-	//fmt.Println("getTokenFromCode")
-	url2 := fmt.Sprintf("%s?code=%s&redirect_uri=%s&client_id=%s&client_secret=%s&scope=&grant_type=authorization_code", oa.tokenURL, code, url.PathEscape(oa.redirectURL), oa.clientID, oa.clientSecret)
-	//fmt.Println("getTokenFromCode", url)
-	return oa.GetToken(url2)
+	data := url.Values{}
+	data.Set("client_id", oa.clientID)
+	data.Set("client_secret", oa.clientSecret)
+	data.Set("code", code)
+	data.Set("grant_type", "authorization_code")
+	data.Set("redirect_uri", oa.redirectURL)
+
+	return oa.GetToken(&data)
 }
 
 func (oa *OAuth2) getTokenFromRefreshToken() error {
@@ -152,9 +194,13 @@ func (oa *OAuth2) getTokenFromRefreshToken() error {
 		return oa.initToken()
 	}
 
-	url2 := fmt.Sprintf("%s?client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token&access_type=offline&prompt=consent", oa.tokenURL, oa.clientID, oa.clientSecret, oa.token.RefreshToken)
-	//fmt.Println("getTokenFromRefreshToken", url)
-	return oa.GetToken(url2)
+	data := url.Values{}
+	data.Set("client_id", oa.clientID)
+	data.Set("client_secret", oa.clientSecret)
+	data.Set("refresh_token", *((*oa.token).RefreshToken))
+	data.Set("grant_type", "refresh_token")
+
+	return oa.GetToken(&data)
 }
 
 // ValidateToken validates current token and retrieves a new one if necessary
