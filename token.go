@@ -1,6 +1,7 @@
 package oauth2
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -13,11 +14,11 @@ var tokenMutex sync.Mutex
 // Token stures Token object
 //
 type Token struct {
-	AccessToken  *string `json:"access_token"`
-	Scope        *string `json:"scope"`
-	TokenType    *string `json:"token_type"`
-	ExpiresIn    *[]byte `json:"expires_in"`
-	RefreshToken *string `json:"refresh_token"`
+	AccessToken  *string          `json:"access_token"`
+	Scope        *string          `json:"scope"`
+	TokenType    *string          `json:"token_type"`
+	ExpiresIn    *json.RawMessage `json:"expires_in"`
+	RefreshToken *string          `json:"refresh_token"`
 	Expiry       *time.Time
 }
 
