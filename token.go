@@ -81,14 +81,15 @@ func (t *Token) hasAccessToken() bool {
 	return true
 }
 
-func (t *Token) hasValidAccessToken() bool {
+func (t *Token) hasValidAccessToken(atTime time.Time) bool {
 	if !t.hasAccessToken() {
 		return false
 	}
 	if t.Expiry == nil {
 		return true
 	}
-	if t.Expiry.Add(-60 * time.Second).Before(time.Now()) {
+
+	if t.Expiry.Before(atTime) {
 		return false
 	}
 	return true

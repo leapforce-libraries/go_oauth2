@@ -40,6 +40,7 @@ type OAuth2 struct {
 	token           *Token
 	bigQuery        *bigquerytools.BigQuery
 	isLive          bool
+	locationUTC     *time.Location
 }
 
 type ApiError struct {
@@ -59,6 +60,9 @@ func NewOAuth(apiName string, clientID string, clienSecret string, scope string,
 	_oAuth2.tokenHTTPMethod = tokenHTTPMethod
 	_oAuth2.bigQuery = bigquery
 	_oAuth2.isLive = isLive
+
+	locUTC, _ := time.LoadLocation("UTC")
+	_oAuth2.locationUTC = locUTC
 
 	return _oAuth2
 }
@@ -161,7 +165,8 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 		if err != nil {
 			token.Expiry = nil
 		} else {
-			expiry := time.Now().Add(time.Duration(expiresIn) * time.Second)
+			//convert to UTC
+			expiry := time.Now().Add(time.Duration(expiresIn) * time.Second).In(oa.locationUTC)
 			token.Expiry = &expiry
 		}
 	} else {
@@ -224,7 +229,10 @@ func (oa *OAuth2) ValidateToken() error {
 		}
 	}
 
-	if oa.token.hasValidAccessToken() {
+	// token should be valid at least one minute from now (te be sure)
+	atTimeUTC := time.Now().In(oa.locationUTC).Add(60 * time.Second)
+
+	if oa.token.hasValidAccessToken(atTimeUTC) {
 		return nil
 	}
 
@@ -234,7 +242,7 @@ func (oa *OAuth2) ValidateToken() error {
 			return err
 		}
 
-		if oa.token.hasValidAccessToken() {
+		if oa.token.hasValidAccessToken(atTimeUTC) {
 			return nil
 		}
 	}
@@ -336,13 +344,21 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 		break
 	}
 
+	expiry := bigquerytools.NullTimestampToTime(tokenBQ.Expiry)
+
+	if expiry != nil {
+		//convert to UTC
+		expiryUTC := (*expiry).In(oa.locationUTC)
+		expiry = &expiryUTC
+	}
+
 	oa.token = &Token{
 		bigquerytools.NullStringToString(tokenBQ.AccessToken),
 		bigquerytools.NullStringToString(tokenBQ.Scope),
 		bigquerytools.NullStringToString(tokenBQ.TokenType),
 		nil,
 		bigquerytools.NullStringToString(tokenBQ.RefreshToken),
-		bigquerytools.NullTimestampToTime(tokenBQ.Expiry),
+		expiry,
 	}
 
 	oa.token.Print()
