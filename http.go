@@ -151,11 +151,11 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader) (*h
 		return nil, &types.ErrorString{"No Token."}
 	}
 
-	if (*oa.token).AccessToken == "" {
+	if (*oa.token).AccessToken == nil {
 		return nil, &types.ErrorString{"No AccessToken."}
 	}
 
-	accessToken := (*oa.token).AccessToken
+	accessToken := *((*oa.token).AccessToken)
 
 	// Add authorization token to header
 	bearer := fmt.Sprintf("Bearer %s", accessToken)

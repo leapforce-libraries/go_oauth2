@@ -13,11 +13,11 @@ var tokenMutex sync.Mutex
 // Token stures Token object
 //
 type Token struct {
-	AccessToken  string `json:"access_token"`
-	Scope        string `json:"scope"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    string `json:"expires_in"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken  *string `json:"access_token"`
+	Scope        *string `json:"scope"`
+	TokenType    *string `json:"token_type"`
+	ExpiresIn    *string `json:"expires_in"`
+	RefreshToken *string `json:"refresh_token"`
 	Expiry       *time.Time
 }
 
@@ -27,34 +27,34 @@ func (t *Token) Print() {
 		return
 	}
 
-	if t.AccessToken == "" {
+	if t.AccessToken == nil {
 		fmt.Println("AccessToken: <nil>")
 	} else {
-		fmt.Println("AccessToken: ", t.AccessToken)
+		fmt.Println("AccessToken: ", *t.AccessToken)
 	}
 
-	if t.Scope == "" {
+	if t.Scope == nil {
 		fmt.Println("Scope: <nil>")
 	} else {
-		fmt.Println("Scope: ", t.Scope)
+		fmt.Println("Scope: ", *t.Scope)
 	}
 
-	if t.TokenType == "" {
+	if t.TokenType == nil {
 		fmt.Println("TokenType: <nil>")
 	} else {
-		fmt.Println("TokenType: ", t.TokenType)
+		fmt.Println("TokenType: ", *t.TokenType)
 	}
 
-	if t.ExpiresIn == "" {
+	if t.ExpiresIn == nil {
 		fmt.Println("ExpiresIn: <nil>")
 	} else {
-		fmt.Println("ExpiresIn: ", t.ExpiresIn)
+		fmt.Println("ExpiresIn: ", *t.ExpiresIn)
 	}
 
-	if t.RefreshToken == "" {
+	if t.RefreshToken == nil {
 		fmt.Println("RefreshToken: <nil>")
 	} else {
-		fmt.Println("RefreshToken: ", t.RefreshToken)
+		fmt.Println("RefreshToken: ", *t.RefreshToken)
 	}
 
 	if t.Expiry == nil {
@@ -72,8 +72,13 @@ func (t *Token) useable() bool {
 	if t == nil {
 		return false
 	}
-	if t.AccessToken == "" {
-		if t.RefreshToken == "" {
+	if t.AccessToken == nil {
+		return false
+	}
+	if *t.AccessToken == "" {
+		if t.RefreshToken == nil {
+			return false
+		} else if *t.RefreshToken == "" {
 			return false
 		}
 	}
@@ -84,7 +89,10 @@ func (t *Token) refreshable() bool {
 	if t == nil {
 		return false
 	}
-	if t.RefreshToken == "" {
+	if t.RefreshToken == nil {
+		return false
+	}
+	if *t.RefreshToken == "" {
 		return false
 	}
 	return true

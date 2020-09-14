@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/bigquery"
 	bigquerytools "github.com/Leapforce-nl/go_bigquerytools"
 	types "github.com/Leapforce-nl/go_types"
 	"github.com/getsentry/sentry-go"
@@ -154,8 +155,8 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 		return err
 	}
 
-	if token.ExpiresIn != "" {
-		expiresIn, err := strconv.ParseInt(token.ExpiresIn, 10, 64)
+	if token.ExpiresIn != nil {
+		expiresIn, err := strconv.ParseInt(*token.ExpiresIn, 10, 64)
 		if err != nil {
 			token.Expiry = nil
 		} else {
@@ -202,7 +203,7 @@ func (oa *OAuth2) getTokenFromRefreshToken() error {
 	data := url.Values{}
 	data.Set("client_id", oa.clientID)
 	data.Set("client_secret", oa.clientSecret)
-	data.Set("refresh_token", (*oa.token).RefreshToken)
+	data.Set("refresh_token", *((*oa.token).RefreshToken))
 	data.Set("grant_type", "refresh_token")
 
 	return oa.GetToken(&data)
@@ -307,12 +308,20 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 		return err
 	}
 
-	token := new(Token)
+	type TokenBQ struct {
+		AccessToken  bigquery.NullString
+		Scope        bigquery.NullString
+		TokenType    bigquery.NullString
+		RefreshToken bigquery.NullString
+		Expiry       bigquery.NullTimestamp
+	}
+
+	tokenBQ := new(TokenBQ)
 	count := 0
 	for {
 		fmt.Println("count", count)
 		count++
-		err := it.Next(token)
+		err := it.Next(tokenBQ)
 		if err == iterator.Done {
 			break
 		}
@@ -324,20 +333,18 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 		break
 	}
 
-	oa.token = token
+	fmt.Println(tokenBQ)
+
+	oa.token = &Token{
+		bigquerytools.NullStringToString(tokenBQ.AccessToken),
+		bigquerytools.NullStringToString(tokenBQ.Scope),
+		bigquerytools.NullStringToString(tokenBQ.TokenType),
+		nil,
+		bigquerytools.NullStringToString(tokenBQ.RefreshToken),
+		bigquerytools.NullTimestampToTime(tokenBQ.Expiry),
+	}
 
 	oa.token.Print()
-	/*
-		if oa.token == nil {
-			oa.token = new(Token)
-		}
-
-		//tokenType := "bearer"
-		//oa.token.TokenType = &tokenType
-		//expiry := time.Now().Add(-10 * time.Second)
-		//oa.token.Expiry = &expiry
-		oa.token.RefreshToken = token.RefreshToken
-		oa.token.AccessToken = nil*/
 
 	return nil
 }
@@ -353,18 +360,24 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 	ctx := context.Background()
 
 	tokenType := "NULLIF('','')"
-	if oa.token.TokenType != "" {
-		tokenType = fmt.Sprintf("'%s'", oa.token.TokenType)
+	if oa.token.TokenType != nil {
+		if *oa.token.TokenType != "" {
+			tokenType = fmt.Sprintf("'%s'", *oa.token.TokenType)
+		}
 	}
 
 	accessToken := "NULLIF('','')"
-	if oa.token.AccessToken != "" {
-		accessToken = fmt.Sprintf("'%s'", oa.token.AccessToken)
+	if oa.token.AccessToken != nil {
+		if *oa.token.AccessToken != "" {
+			accessToken = fmt.Sprintf("'%s'", *oa.token.AccessToken)
+		}
 	}
 
 	refreshToken := "NULLIF('','')"
-	if oa.token.RefreshToken != "" {
-		refreshToken = fmt.Sprintf("'%s'", oa.token.RefreshToken)
+	if oa.token.RefreshToken != nil {
+		if *oa.token.RefreshToken != "" {
+			refreshToken = fmt.Sprintf("'%s'", *oa.token.RefreshToken)
+		}
 	}
 
 	expiry := "TIMESTAMP(NULL)"
@@ -373,8 +386,10 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 	}
 
 	scope := "NULLIF('','')"
-	if oa.token.Scope != "" {
-		scope = fmt.Sprintf("'%s'", oa.token.Scope)
+	if oa.token.Scope != nil {
+		if *oa.token.Scope != "" {
+			scope = fmt.Sprintf("'%s'", *oa.token.Scope)
+		}
 	}
 
 	sql := "MERGE `" + tableRefreshToken + "` AS TARGET " +
