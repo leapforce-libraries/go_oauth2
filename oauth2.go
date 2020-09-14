@@ -154,8 +154,8 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 		return err
 	}
 
-	if token.ExpiresIn != nil {
-		expiresIn, err := strconv.ParseInt(*token.ExpiresIn, 10, 64)
+	if token.ExpiresIn != "" {
+		expiresIn, err := strconv.ParseInt(token.ExpiresIn, 10, 64)
 		if err != nil {
 			token.Expiry = nil
 		} else {
@@ -202,7 +202,7 @@ func (oa *OAuth2) getTokenFromRefreshToken() error {
 	data := url.Values{}
 	data.Set("client_id", oa.clientID)
 	data.Set("client_secret", oa.clientSecret)
-	data.Set("refresh_token", *((*oa.token).RefreshToken))
+	data.Set("refresh_token", (*oa.token).RefreshToken)
 	data.Set("grant_type", "refresh_token")
 
 	return oa.GetToken(&data)
@@ -353,24 +353,18 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 	ctx := context.Background()
 
 	tokenType := "NULLIF('','')"
-	if oa.token.TokenType != nil {
-		if *oa.token.TokenType != "" {
-			tokenType = fmt.Sprintf("'%s'", *oa.token.TokenType)
-		}
+	if oa.token.TokenType != "" {
+		tokenType = fmt.Sprintf("'%s'", oa.token.TokenType)
 	}
 
 	accessToken := "NULLIF('','')"
-	if oa.token.AccessToken != nil {
-		if *oa.token.AccessToken != "" {
-			accessToken = fmt.Sprintf("'%s'", *oa.token.AccessToken)
-		}
+	if oa.token.AccessToken != "" {
+		accessToken = fmt.Sprintf("'%s'", oa.token.AccessToken)
 	}
 
 	refreshToken := "NULLIF('','')"
-	if oa.token.RefreshToken != nil {
-		if *oa.token.RefreshToken != "" {
-			refreshToken = fmt.Sprintf("'%s'", *oa.token.RefreshToken)
-		}
+	if oa.token.RefreshToken != "" {
+		refreshToken = fmt.Sprintf("'%s'", oa.token.RefreshToken)
 	}
 
 	expiry := "TIMESTAMP(NULL)"
@@ -379,10 +373,8 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 	}
 
 	scope := "NULLIF('','')"
-	if oa.token.Scope != nil {
-		if *oa.token.Scope != "" {
-			scope = fmt.Sprintf("'%s'", *oa.token.Scope)
-		}
+	if oa.token.Scope != "" {
+		scope = fmt.Sprintf("'%s'", oa.token.Scope)
 	}
 
 	sql := "MERGE `" + tableRefreshToken + "` AS TARGET " +
