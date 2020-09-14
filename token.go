@@ -16,7 +16,7 @@ type Token struct {
 	AccessToken  *string `json:"access_token"`
 	Scope        *string `json:"scope"`
 	TokenType    *string `json:"token_type"`
-	ExpiresIn    *int64  `json:"expires_in"`
+	ExpiresIn    *string `json:"expires_in"`
 	RefreshToken *string `json:"refresh_token"`
 	Expiry       *time.Time
 }

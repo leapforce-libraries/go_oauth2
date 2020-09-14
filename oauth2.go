@@ -155,8 +155,13 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 	}
 
 	if token.ExpiresIn != nil {
-		expiry := time.Now().Add(time.Duration(*token.ExpiresIn) * time.Second)
-		token.Expiry = &expiry
+		expiresIn, err := strconv.ParseInt(*token.ExpiresIn, 10, 64)
+		if err != nil {
+			token.Expiry = nil
+		} else {
+			expiry := time.Now().Add(time.Duration(expiresIn) * time.Second)
+			token.Expiry = &expiry
+		}
 	} else {
 		token.Expiry = nil
 	}
