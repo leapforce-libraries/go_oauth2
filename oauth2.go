@@ -87,7 +87,7 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 			if index == 0 {
 				url = fmt.Sprintf("%s?%s=%s", url, key, valueString)
 			} else {
-				url = fmt.Sprintf("%s&%s=%s", url, key, value)
+				url = fmt.Sprintf("%s&%s=%s", url, key, valueString)
 			}
 			index++
 		}
