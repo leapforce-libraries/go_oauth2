@@ -169,7 +169,7 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 
 	if token.ExpiresIn != nil {
 		expiresIn := fmt.Sprintf("%v", *token.ExpiresIn)
-
+		fmt.Println(*token.ExpiresIn)
 		fmt.Println(expiresIn)
 		expiresInString, err := strconv.ParseInt(expiresIn, 10, 64)
 		if err != nil {
