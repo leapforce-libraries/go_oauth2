@@ -124,8 +124,6 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 		return &types.ErrorString{fmt.Sprintf("Invalid TokenHTTPMethod: %s", oa.tokenHTTPMethod)}
 	}
 
-	fmt.Println("request:", request)
-
 	httpClient := http.Client{}
 
 	// Send out the HTTP request
@@ -170,7 +168,7 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 	}
 
 	if token.ExpiresIn != nil {
-		expiresIn, err := strconv.ParseInt(*token.ExpiresIn, 10, 64)
+		expiresIn, err := strconv.ParseInt(fmt.Sprintf("%v", *token.ExpiresIn), 10, 64)
 		if err != nil {
 			token.Expiry = nil
 		} else {
@@ -292,8 +290,6 @@ func (oa *OAuth2) InitToken() error {
 			w.WriteHeader(http.StatusBadRequest)
 		}
 		code := r.FormValue("code")
-
-		fmt.Println(code)
 
 		err = oa.getTokenFromCode(code)
 		if err != nil {
