@@ -120,12 +120,6 @@ func (oa *OAuth2) printError(res *http.Response) error {
 }
 
 func (oa *OAuth2) getHTTPClient() (*http.Client, error) {
-	/*err := oa.Wait()
-	if err != nil {
-		return nil, err
-	}*/
-	fmt.Println("!!!WAIT FUNCTION to be implemented!!!")
-
 	err := oa.ValidateToken()
 	if err != nil {
 		return nil, err
@@ -163,8 +157,6 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader) (*h
 	req.Header.Set("Accept", "application/json")
 
 	// Send out the HTTP request
-	//oa.RequestCount++
-	fmt.Println("!!!RequestCount to be implemented!!!")
 	response, err := client.Do(req)
 
 	oa.unlockToken()
