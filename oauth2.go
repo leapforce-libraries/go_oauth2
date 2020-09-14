@@ -1,4 +1,4 @@
-package googleoauth2
+package oauth2
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"sync"
 	"time"
 
 	bigquerytools "github.com/Leapforce-nl/go_bigquerytools"
@@ -33,64 +32,10 @@ type OAuth2 struct {
 	redirectURL     string
 	authURL         string
 	tokenURL        string
-	tokenHttpMethod string
-	Token           *Token
+	tokenHTTPMethod string
+	token           *Token
 	bigQuery        *bigquerytools.BigQuery
 	isLive          bool
-}
-
-var tokenMutex sync.Mutex
-
-type Token struct {
-	AccessToken  *string `json:"access_token"`
-	Scope        *string `json:"scope"`
-	TokenType    *string `json:"token_type"`
-	ExpiresIn    *int64  `json:"expires_in"`
-	RefreshToken *string `json:"refresh_token"`
-	Expiry       *time.Time
-}
-
-func (t *Token) Print() {
-	if t == nil {
-		fmt.Println("Token: <nil>")
-		return
-	}
-
-	if t.AccessToken == nil {
-		fmt.Println("AccessToken: <nil>")
-	} else {
-		fmt.Println("AccessToken: ", *t.AccessToken)
-	}
-
-	if t.Scope == nil {
-		fmt.Println("Scope: <nil>")
-	} else {
-		fmt.Println("Scope: ", *t.Scope)
-	}
-
-	if t.TokenType == nil {
-		fmt.Println("TokenType: <nil>")
-	} else {
-		fmt.Println("TokenType: ", *t.TokenType)
-	}
-
-	if t.ExpiresIn == nil {
-		fmt.Println("ExpiresIn: <nil>")
-	} else {
-		fmt.Println("ExpiresIn: ", *t.ExpiresIn)
-	}
-
-	if t.RefreshToken == nil {
-		fmt.Println("RefreshToken: <nil>")
-	} else {
-		fmt.Println("RefreshToken: ", *t.RefreshToken)
-	}
-
-	if t.Expiry == nil {
-		fmt.Println("Expiry: <nil>")
-	} else {
-		fmt.Println("Expiry: ", *t.Expiry)
-	}
 }
 
 type ApiError struct {
@@ -98,7 +43,7 @@ type ApiError struct {
 	Description string `json:"error_description,omitempty"`
 }
 
-func NewOAuth(apiName string, clientID string, clienSecret string, scope string, redirectURL string, authURL string, tokenURL string, tokenHttpMethod string, bigquery *bigquerytools.BigQuery, isLive bool) *OAuth2 {
+func NewOAuth(apiName string, clientID string, clienSecret string, scope string, redirectURL string, authURL string, tokenURL string, tokenHTTPMethod string, bigquery *bigquerytools.BigQuery, isLive bool) *OAuth2 {
 	_oAuth2 := new(OAuth2)
 	_oAuth2.apiName = apiName
 	_oAuth2.clientID = clientID
@@ -107,78 +52,28 @@ func NewOAuth(apiName string, clientID string, clienSecret string, scope string,
 	_oAuth2.redirectURL = redirectURL
 	_oAuth2.authURL = authURL
 	_oAuth2.tokenURL = tokenURL
-	_oAuth2.tokenHttpMethod = tokenHttpMethod
-	//_oAuth2.Token        *Token
+	_oAuth2.tokenHTTPMethod = tokenHTTPMethod
 	_oAuth2.bigQuery = bigquery
 	_oAuth2.isLive = isLive
 
 	return _oAuth2
 }
 
-func (oa *OAuth2) LockToken() {
+func (oa *OAuth2) lockToken() {
 	tokenMutex.Lock()
 }
 
-func (oa *OAuth2) UnlockToken() {
-	tokenMutex.Unlock()
-}
-
-func (t *Token) Useable() bool {
-	if t == nil {
-		return false
-	}
-	if t.AccessToken == nil {
-		return false
-	}
-	if *t.AccessToken == "" {
-		if t.RefreshToken == nil {
-			return false
-		} else if *t.RefreshToken == "" {
-			return false
-		}
-	}
-	return true
-}
-
-func (t *Token) Refreshable() bool {
-	if t == nil {
-		return false
-	}
-	if t.RefreshToken == nil {
-		return false
-	}
-	if *t.RefreshToken == "" {
-		return false
-	}
-	return true
-}
-
-func (t *Token) IsExpired() (bool, error) {
-	if !t.Useable() {
-		return true, &types.ErrorString{"Token is not valid."}
-	}
-	if t.Expiry.Add(-60 * time.Second).Before(time.Now()) {
-		return true, nil
-	}
-	return false, nil
-}
-
 func (oa *OAuth2) GetToken(url string) error {
-	guid := types.NewGUID()
-	fmt.Println("GetTokenGUID:", guid)
-	fmt.Println(url)
-
 	httpClient := http.Client{}
-	req, err := http.NewRequest(oa.tokenHttpMethod, url, nil)
+	req, err := http.NewRequest(oa.tokenHTTPMethod, url, nil)
 	req.Header.Add("Content-Type", "application/json")
-	//req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 	if err != nil {
 		return err
 	}
 
 	// We set this header since we want the response
 	// as JSON
-	req.Header.Set("accept", "application/json")
+	req.Header.Set("Accept", "application/json")
 
 	// Send out the HTTP request
 	res, err := httpClient.Do(req)
@@ -191,13 +86,6 @@ func (oa *OAuth2) GetToken(url string) error {
 	b, err := ioutil.ReadAll(res.Body)
 
 	if res.StatusCode < 200 || res.StatusCode > 299 {
-		fmt.Println("GetTokenGUID:", guid)
-		fmt.Println("AccessToken:", oa.Token.AccessToken)
-		fmt.Println("RefreshToken:", oa.Token.RefreshToken)
-		fmt.Println("ExpiresIn:", oa.Token.ExpiresIn)
-		fmt.Println("Expiry:", oa.Token.Expiry)
-		fmt.Println("Now:", time.Now())
-
 		eoError := ApiError{}
 
 		err = json.Unmarshal(b, &eoError)
@@ -207,6 +95,8 @@ func (oa *OAuth2) GetToken(url string) error {
 
 		message := fmt.Sprintln("Error:", res.StatusCode, eoError.Error, ", ", eoError.Description)
 		fmt.Println(message)
+
+		oa.token.Print()
 
 		if res.StatusCode == 401 {
 			if oa.isLive {
@@ -235,37 +125,12 @@ func (oa *OAuth2) GetToken(url string) error {
 
 	token.Print()
 
-	oa.Token = &token
-	/*
-		if oa.Token == nil {
-			oa.Token = &Token{}
-		}
+	oa.token = &token
 
-		oa.Token.Expiry = token.Expiry
-		oa.Token.AccessToken = token.AccessToken
-
-		if hasRefreshToken {
-			oa.Token.RefreshToken = token.RefreshToken
-
-			err = oa.saveTokenToBigQuery()
-			if err != nil {
-				return err
-			}
-		}*/
 	err = oa.saveTokenToBigQuery()
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("new AccessToken:")
-	fmt.Println(oa.Token.AccessToken)
-	fmt.Println("new RefreshToken:")
-	fmt.Println(oa.Token.RefreshToken)
-	fmt.Println("new ExpiresIn:")
-	fmt.Println(oa.Token.ExpiresIn)
-	fmt.Println("new Expiry:")
-	fmt.Println(oa.Token.Expiry)
-	fmt.Println("GetTokenGUID:", guid)
 
 	return nil
 }
@@ -283,11 +148,11 @@ func (oa *OAuth2) getTokenFromRefreshToken() error {
 	//always get refresh token from BQ prior to using it
 	oa.getTokenFromBigQuery()
 
-	if !oa.Token.Refreshable() {
+	if !oa.token.refreshable() {
 		return oa.initToken()
 	}
 
-	url2 := fmt.Sprintf("%s?client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token&access_type=offline&prompt=consent", oa.tokenURL, oa.clientID, oa.clientSecret, oa.Token.RefreshToken)
+	url2 := fmt.Sprintf("%s?client_id=%s&client_secret=%s&refresh_token=%s&grant_type=refresh_token&access_type=offline&prompt=consent", oa.tokenURL, oa.clientID, oa.clientSecret, oa.token.RefreshToken)
 	//fmt.Println("getTokenFromRefreshToken", url)
 	return oa.GetToken(url2)
 }
@@ -295,17 +160,17 @@ func (oa *OAuth2) getTokenFromRefreshToken() error {
 // ValidateToken validates current token and retrieves a new one if necessary
 //
 func (oa *OAuth2) ValidateToken() error {
-	oa.LockToken()
-	defer oa.UnlockToken()
+	oa.lockToken()
+	defer oa.unlockToken()
 
-	if !oa.Token.Useable() {
+	if !oa.token.useable() {
 
 		err := oa.getTokenFromRefreshToken()
 		if err != nil {
 			return err
 		}
 
-		if !oa.Token.Useable() {
+		if !oa.token.useable() {
 			if oa.isLive {
 				sentry.CaptureMessage("Refreshtoken not found or empty, login needed to retrieve a new one.")
 			}
@@ -317,12 +182,11 @@ func (oa *OAuth2) ValidateToken() error {
 		}
 	}
 
-	isExpired, err := oa.Token.IsExpired()
+	isExpired, err := oa.token.isExpired()
 	if err != nil {
 		return err
 	}
 	if isExpired {
-		//fmt.Println(time.Now(), "[token expired]")
 		err = oa.getTokenFromRefreshToken()
 		if err != nil {
 			return err
@@ -406,20 +270,20 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 		break
 	}
 
-	oa.Token = token
+	oa.token = token
 
-	oa.Token.Print()
+	oa.token.Print()
 	/*
-		if oa.Token == nil {
-			oa.Token = new(Token)
+		if oa.token == nil {
+			oa.token = new(Token)
 		}
 
 		//tokenType := "bearer"
-		//oa.Token.TokenType = &tokenType
+		//oa.token.TokenType = &tokenType
 		//expiry := time.Now().Add(-10 * time.Second)
-		//oa.Token.Expiry = &expiry
-		oa.Token.RefreshToken = token.RefreshToken
-		oa.Token.AccessToken = nil*/
+		//oa.token.Expiry = &expiry
+		oa.token.RefreshToken = token.RefreshToken
+		oa.token.AccessToken = nil*/
 
 	return nil
 }
@@ -435,35 +299,35 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 	ctx := context.Background()
 
 	tokenType := "NULLIF('','')"
-	if oa.Token.TokenType != nil {
-		if *oa.Token.TokenType != "" {
-			tokenType = fmt.Sprintf("'%s'", *oa.Token.TokenType)
+	if oa.token.TokenType != nil {
+		if *oa.token.TokenType != "" {
+			tokenType = fmt.Sprintf("'%s'", *oa.token.TokenType)
 		}
 	}
 
 	accessToken := "NULLIF('','')"
-	if oa.Token.AccessToken != nil {
-		if *oa.Token.AccessToken != "" {
-			accessToken = fmt.Sprintf("'%s'", *oa.Token.AccessToken)
+	if oa.token.AccessToken != nil {
+		if *oa.token.AccessToken != "" {
+			accessToken = fmt.Sprintf("'%s'", *oa.token.AccessToken)
 		}
 	}
 
 	refreshToken := "NULLIF('','')"
-	if oa.Token.RefreshToken != nil {
-		if *oa.Token.RefreshToken != "" {
-			refreshToken = fmt.Sprintf("'%s'", *oa.Token.RefreshToken)
+	if oa.token.RefreshToken != nil {
+		if *oa.token.RefreshToken != "" {
+			refreshToken = fmt.Sprintf("'%s'", *oa.token.RefreshToken)
 		}
 	}
 
 	expiry := "TIMESTAMP(NULL)"
-	if oa.Token.Expiry != nil {
-		expiry = fmt.Sprintf("TIMESTAMP('%s')", (*oa.Token.Expiry).Format("2006-01-02T15:04:05"))
+	if oa.token.Expiry != nil {
+		expiry = fmt.Sprintf("TIMESTAMP('%s')", (*oa.token.Expiry).Format("2006-01-02T15:04:05"))
 	}
 
 	scope := "NULLIF('','')"
-	if oa.Token.Scope != nil {
-		if *oa.Token.Scope != "" {
-			scope = fmt.Sprintf("'%s'", *oa.Token.Scope)
+	if oa.token.Scope != nil {
+		if *oa.token.Scope != "" {
+			scope = fmt.Sprintf("'%s'", *oa.token.Scope)
 		}
 	}
 
