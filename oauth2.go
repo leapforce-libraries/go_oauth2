@@ -74,6 +74,8 @@ func (oa *OAuth2) lockToken() {
 func (oa *OAuth2) GetToken(params *url.Values) error {
 	request := new(http.Request)
 
+	fmt.Println(oa.tokenHTTPMethod)
+
 	if oa.tokenHTTPMethod == http.MethodGet {
 		url := oa.tokenURL
 
@@ -91,8 +93,6 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 			}
 			index++
 		}
-
-		fmt.Println("url:", url)
 
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		req.Header.Add("Content-Type", "application/json")
@@ -123,6 +123,8 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 	} else {
 		return &types.ErrorString{fmt.Sprintf("Invalid TokenHTTPMethod: %s", oa.tokenHTTPMethod)}
 	}
+
+	fmt.Println("request:", request)
 
 	httpClient := http.Client{}
 
