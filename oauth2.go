@@ -94,6 +94,10 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 			index++
 		}
 
+		url2 := fmt.Sprintf("%s%s", url, params.Encode())
+		fmt.Println("url", url)
+		fmt.Println("url2", url2)
+
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Accept", "application/json")
