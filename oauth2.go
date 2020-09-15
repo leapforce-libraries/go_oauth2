@@ -79,7 +79,7 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 	if oa.tokenHTTPMethod == http.MethodGet {
 		url := oa.tokenURL
 
-		index := 0
+		/*index := 0
 		for key, value := range *params {
 			valueString := ""
 			if len(value) > 0 {
@@ -92,11 +92,13 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 				url = fmt.Sprintf("%s&%s=%s", url, key, valueString)
 			}
 			index++
-		}
+		}*/
 
-		url2 := fmt.Sprintf("%s%s", url, params.Encode())
-		fmt.Println("url", url)
-		fmt.Println("url2", url2)
+		if params != nil {
+			if len(*params) > 0 {
+				url = fmt.Sprintf("%s?%s", url, (*params).Encode())
+			}
+		}
 
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		req.Header.Add("Content-Type", "application/json")
