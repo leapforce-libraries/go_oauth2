@@ -20,16 +20,18 @@ func (oa *OAuth2) Get(url string, model interface{}) (*http.Response, error) {
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	if model != nil {
+		defer res.Body.Close()
 
-	b, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
+		b, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
 
-	err = json.Unmarshal(b, &model)
-	if err != nil {
-		return nil, err
+		err = json.Unmarshal(b, &model)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return res, nil
@@ -44,16 +46,18 @@ func (oa *OAuth2) Post(url string, buf *bytes.Buffer, model interface{}) (*http.
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	if model != nil {
+		defer res.Body.Close()
 
-	b, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
+		b, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
 
-	err = json.Unmarshal(b, &model)
-	if err != nil {
-		return nil, err
+		err = json.Unmarshal(b, &model)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return res, nil
@@ -68,16 +72,18 @@ func (oa *OAuth2) Put(url string, buf *bytes.Buffer, model interface{}) (*http.R
 		return nil, err
 	}
 
-	defer res.Body.Close()
+	if model != nil {
+		defer res.Body.Close()
 
-	b, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
+		b, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
 
-	err = json.Unmarshal(b, &model)
-	if err != nil {
-		return nil, err
+		err = json.Unmarshal(b, &model)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return res, nil
