@@ -397,7 +397,7 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 
 	ctx := context.Background()
 
-	tokenType := "NULLIF('','')"
+	tokenType := "TokenType" //do not clear TokenType if not in response
 	if oa.token.TokenType != nil {
 		if *oa.token.TokenType != "" {
 			tokenType = fmt.Sprintf("'%s'", *oa.token.TokenType)
@@ -411,7 +411,7 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 		}
 	}
 
-	refreshToken := "NULLIF('','')"
+	refreshToken := "RefreshToken" //do not clear RefreshToken if not in response
 	if oa.token.RefreshToken != nil {
 		if *oa.token.RefreshToken != "" {
 			refreshToken = fmt.Sprintf("'%s'", *oa.token.RefreshToken)
@@ -423,7 +423,7 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 		expiry = fmt.Sprintf("TIMESTAMP('%s')", (*oa.token.Expiry).Format("2006-01-02T15:04:05"))
 	}
 
-	scope := "NULLIF('','')"
+	scope := "Scope" //do not clear Scope if not in response
 	if oa.token.Scope != nil {
 		if *oa.token.Scope != "" {
 			scope = fmt.Sprintf("'%s'", *oa.token.Scope)
