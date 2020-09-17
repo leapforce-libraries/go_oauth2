@@ -448,7 +448,7 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 		" AND TARGET.ClientID = SOURCE.ClientID " +
 		"WHEN MATCHED THEN " +
 		"	UPDATE " + sqlUpdate +
-		"WHEN NOT MATCHED BY TARGET THEN " +
+		" WHEN NOT MATCHED BY TARGET THEN " +
 		"	INSERT (Api, ClientID, TokenType, AccessToken, RefreshToken, Expiry, Scope) " +
 		"	VALUES (SOURCE.Api, SOURCE.ClientID, SOURCE.TokenType, SOURCE.AccessToken, SOURCE.RefreshToken, SOURCE.Expiry, SOURCE.Scope)"
 
