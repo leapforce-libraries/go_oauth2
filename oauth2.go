@@ -397,10 +397,13 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 
 	ctx := context.Background()
 
-	tokenType := "TokenType" //do not clear TokenType if not in response
+	sqlUpdate := "SET AccessToken = SOURCE.AccessToken, Expiry = SOURCE.Expiry"
+
+	tokenType := "NULLIF('','')"
 	if oa.token.TokenType != nil {
 		if *oa.token.TokenType != "" {
 			tokenType = fmt.Sprintf("'%s'", *oa.token.TokenType)
+			sqlUpdate = fmt.Sprintf("%s, TokenType = SOURCE.TokenType", sqlUpdate)
 		}
 	}
 
@@ -411,10 +414,11 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 		}
 	}
 
-	refreshToken := "RefreshToken" //do not clear RefreshToken if not in response
+	refreshToken := "NULLIF('','')"
 	if oa.token.RefreshToken != nil {
 		if *oa.token.RefreshToken != "" {
 			refreshToken = fmt.Sprintf("'%s'", *oa.token.RefreshToken)
+			sqlUpdate = fmt.Sprintf("%s, RefreshToken = SOURCE.RefreshToken", sqlUpdate)
 		}
 	}
 
@@ -423,10 +427,11 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 		expiry = fmt.Sprintf("TIMESTAMP('%s')", (*oa.token.Expiry).Format("2006-01-02T15:04:05"))
 	}
 
-	scope := "Scope" //do not clear Scope if not in response
+	scope := "NULLIF('','')"
 	if oa.token.Scope != nil {
 		if *oa.token.Scope != "" {
 			scope = fmt.Sprintf("'%s'", *oa.token.Scope)
+			sqlUpdate = fmt.Sprintf("%s, Scope = SOURCE.Scope", sqlUpdate)
 		}
 	}
 
@@ -442,18 +447,13 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 		" ON TARGET.Api = SOURCE.Api " +
 		" AND TARGET.ClientID = SOURCE.ClientID " +
 		"WHEN MATCHED THEN " +
-		"	UPDATE " +
-		"	SET TokenType = SOURCE.TokenType " +
-		"	, AccessToken = SOURCE.AccessToken " +
-		"	, RefreshToken = SOURCE.RefreshToken " +
-		"	, Expiry = SOURCE.Expiry " +
-		"	, Scope = SOURCE.Scope	 " +
+		"	UPDATE " + sqlUpdate +
 		"WHEN NOT MATCHED BY TARGET THEN " +
 		"	INSERT (Api, ClientID, TokenType, AccessToken, RefreshToken, Expiry, Scope) " +
 		"	VALUES (SOURCE.Api, SOURCE.ClientID, SOURCE.TokenType, SOURCE.AccessToken, SOURCE.RefreshToken, SOURCE.Expiry, SOURCE.Scope)"
 
 	q := bqClient.Query(sql)
-	//fmt.Println(sql)
+	fmt.Println(sql)
 
 	job, err := q.Run(ctx)
 	if err != nil {
