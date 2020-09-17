@@ -453,7 +453,7 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 		"	VALUES (SOURCE.Api, SOURCE.ClientID, SOURCE.TokenType, SOURCE.AccessToken, SOURCE.RefreshToken, SOURCE.Expiry, SOURCE.Scope)"
 
 	q := bqClient.Query(sql)
-	fmt.Println(sql)
+	//fmt.Println(sql)
 
 	job, err := q.Run(ctx)
 	if err != nil {
