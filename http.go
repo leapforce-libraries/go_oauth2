@@ -66,7 +66,7 @@ func (oa *OAuth2) Post(url string, buf *bytes.Buffer, model interface{}) (*http.
 // Put returns http.Response for generic oAuth2 Put http call
 //
 func (oa *OAuth2) Put(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
-	fmt.Println("oa.Put-buf", buf)
+	//fmt.Println("PUT ", url)
 	res, err := oa.httpRequest(http.MethodPut, url, buf)
 	if err != nil {
 		return nil, err
@@ -152,8 +152,6 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader) (*h
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		fmt.Println(fmt.Sprintf("ERROR in %s", httpMethod))
 		fmt.Println("url", url)
-		fmt.Println("body", body)
-		fmt.Println("body", body)
 		fmt.Println("StatusCode", response.StatusCode)
 		fmt.Println(accessToken)
 		//return nil, oa.printError(response)
