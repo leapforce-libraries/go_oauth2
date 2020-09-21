@@ -95,34 +95,12 @@ func (oa *OAuth2) Delete(url string) (*http.Response, error) {
 	//fmt.Println("DELETE ", url)
 	res, err := oa.httpRequest(http.MethodDelete, url, nil)
 	if err != nil {
-		return nil, err
+		return res, err
 	}
 
 	defer res.Body.Close()
 
 	return res, nil
-}
-
-func (oa *OAuth2) printError(res *http.Response) error {
-	fmt.Println("Status", res.Status)
-
-	/*b, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		//fmt.Println("errUnmarshal1")
-		return err
-	}
-
-	ee := GoogleSearchControlError{}
-
-	err = json.Unmarshal(b, &ee)
-	if err != nil {
-		//fmt.Println("errUnmarshal1")
-		return err
-	}*/
-
-	//message := fmt.Sprintf("Server returned statuscode %v, error:%s", res.StatusCode, ee.Err.Message)
-	message := fmt.Sprintf("Server returned statuscode %v", res.StatusCode)
-	return &types.ErrorString{message}
 }
 
 func (oa *OAuth2) getHTTPClient() (*http.Client, error) {
@@ -173,10 +151,13 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader) (*h
 		fmt.Println(url)
 		fmt.Println("StatusCode", response.StatusCode)
 		fmt.Println(accessToken)
-		return nil, oa.printError(response)
+		//return nil, oa.printError(response)
+
+		message := fmt.Sprintf("Server returned statuscode %v", response.StatusCode)
+		return response, &types.ErrorString{message}
 	}
 	if err != nil {
-		return nil, err
+		return response, err
 	}
 
 	return response, nil
