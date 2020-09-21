@@ -137,8 +137,11 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader) (*h
 
 	// Add authorization token to header
 	bearer := fmt.Sprintf("Bearer %s", accessToken)
-	req.Header.Add("authorization", bearer)
+	req.Header.Add("Authorization", bearer)
 	req.Header.Set("Accept", "application/json")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 
 	// Send out the HTTP request
 	response, err := client.Do(req)
