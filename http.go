@@ -118,7 +118,7 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader) (*h
 		return nil, err
 	}
 
-	req, err := http.NewRequest(httpMethod, url, nil)
+	req, err := http.NewRequest(httpMethod, url, body)
 	if err != nil {
 		return nil, err
 	}
