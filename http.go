@@ -148,7 +148,8 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader) (*h
 	// Check HTTP StatusCode
 	if response.StatusCode < 200 || response.StatusCode > 299 {
 		fmt.Println(fmt.Sprintf("ERROR in %s", httpMethod))
-		fmt.Println(url)
+		fmt.Println("url", url)
+		fmt.Println("body", body)
 		fmt.Println("StatusCode", response.StatusCode)
 		fmt.Println(accessToken)
 		//return nil, oa.printError(response)
