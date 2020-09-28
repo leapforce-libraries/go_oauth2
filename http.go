@@ -21,6 +21,7 @@ func (oa *OAuth2) Get(url string, buf *bytes.Buffer, model interface{}) (*http.R
 // Post returns http.Response for generic oAuth2 Post http call
 //
 func (oa *OAuth2) Post(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
+	//fmt.Println("POST ", url)
 	return oa.httpRequest(http.MethodPost, url, buf, model)
 }
 
@@ -59,6 +60,8 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("body:", body)
 
 	req, err := http.NewRequest(httpMethod, url, body)
 	if err != nil {
