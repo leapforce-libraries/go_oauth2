@@ -13,37 +13,53 @@ import (
 
 // Get returns http.Response for generic oAuth2 Get http call
 //
-func (oa *OAuth2) Get(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
+func (oa *OAuth2) Get(url string, model interface{}) (*http.Response, error) {
 	//fmt.Println("GET ", url)
-	return oa.httpRequest(http.MethodGet, url, buf, model)
+	return oa.httpRequest(http.MethodGet, url, nil, model)
 }
 
 // Post returns http.Response for generic oAuth2 Post http call
 //
 func (oa *OAuth2) Post(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
 	//fmt.Println("POST ", url)
-	return oa.httpRequest(http.MethodPost, url, buf, model)
+	if buf == nil {
+		return oa.httpRequest(http.MethodPost, url, nil, model)
+	} else {
+		return oa.httpRequest(http.MethodPost, url, buf, model)
+	}
 }
 
 // Put returns http.Response for generic oAuth2 Put http call
 //
 func (oa *OAuth2) Put(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
 	//fmt.Println("PUT ", url)
-	return oa.httpRequest(http.MethodPut, url, buf, model)
+	if buf == nil {
+		return oa.httpRequest(http.MethodPut, url, nil, model)
+	} else {
+		return oa.httpRequest(http.MethodPut, url, buf, model)
+	}
 }
 
 // Patch returns http.Response for generic oAuth2 Patch http call
 //
 func (oa *OAuth2) Patch(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
 	//fmt.Println("PATCH ", url)
-	return oa.httpRequest(http.MethodPatch, url, buf, model)
+	if buf == nil {
+		return oa.httpRequest(http.MethodPatch, url, nil, model)
+	} else {
+		return oa.httpRequest(http.MethodPatch, url, buf, model)
+	}
 }
 
 // Delete returns http.Response for generic oAuth2 Delete http call
 //
 func (oa *OAuth2) Delete(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
 	//fmt.Println("DELETE ", url)
-	return oa.httpRequest(http.MethodDelete, url, buf, model)
+	if buf == nil {
+		return oa.httpRequest(http.MethodDelete, url, nil, model)
+	} else {
+		return oa.httpRequest(http.MethodDelete, url, buf, model)
+	}
 }
 
 func (oa *OAuth2) getHTTPClient() (*http.Client, error) {
@@ -60,8 +76,6 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println("body:", body)
 
 	req, err := http.NewRequest(httpMethod, url, body)
 	if err != nil {
