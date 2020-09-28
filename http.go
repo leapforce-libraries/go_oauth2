@@ -13,94 +13,36 @@ import (
 
 // Get returns http.Response for generic oAuth2 Get http call
 //
-func (oa *OAuth2) Get(url string, model interface{}) (*http.Response, error) {
+func (oa *OAuth2) Get(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
 	//fmt.Println("GET ", url)
-	res, err := oa.httpRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if model != nil {
-		defer res.Body.Close()
-
-		b, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		err = json.Unmarshal(b, &model)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return res, nil
+	return oa.httpRequest(http.MethodGet, url, buf, model)
 }
 
 // Post returns http.Response for generic oAuth2 Post http call
 //
 func (oa *OAuth2) Post(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
-	//fmt.Println("POST ", url)
-	res, err := oa.httpRequest(http.MethodPost, url, buf)
-	if err != nil {
-		return nil, err
-	}
-
-	if model != nil {
-		defer res.Body.Close()
-
-		b, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		err = json.Unmarshal(b, &model)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return res, nil
+	return oa.httpRequest(http.MethodPost, url, buf, model)
 }
 
 // Put returns http.Response for generic oAuth2 Put http call
 //
 func (oa *OAuth2) Put(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
 	//fmt.Println("PUT ", url)
-	res, err := oa.httpRequest(http.MethodPut, url, buf)
-	if err != nil {
-		return nil, err
-	}
+	return oa.httpRequest(http.MethodPut, url, buf, model)
+}
 
-	if model != nil {
-		defer res.Body.Close()
-
-		b, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		err = json.Unmarshal(b, &model)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return res, nil
+// Patch returns http.Response for generic oAuth2 Patch http call
+//
+func (oa *OAuth2) Patch(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
+	//fmt.Println("PATCH ", url)
+	return oa.httpRequest(http.MethodPatch, url, buf, model)
 }
 
 // Delete returns http.Response for generic oAuth2 Delete http call
 //
-func (oa *OAuth2) Delete(url string) (*http.Response, error) {
+func (oa *OAuth2) Delete(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
 	//fmt.Println("DELETE ", url)
-	res, err := oa.httpRequest(http.MethodDelete, url, nil)
-	if err != nil {
-		return res, err
-	}
-
-	defer res.Body.Close()
-
-	return res, nil
+	return oa.httpRequest(http.MethodDelete, url, buf, model)
 }
 
 func (oa *OAuth2) getHTTPClient() (*http.Client, error) {
@@ -112,7 +54,7 @@ func (oa *OAuth2) getHTTPClient() (*http.Client, error) {
 	return new(http.Client), nil
 }
 
-func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader) (*http.Response, error) {
+func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, model interface{}) (*http.Response, error) {
 	client, err := oa.getHTTPClient()
 	if err != nil {
 		return nil, err
@@ -161,6 +103,20 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader) (*h
 	}
 	if err != nil {
 		return response, err
+	}
+
+	if model != nil {
+		defer response.Body.Close()
+
+		b, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(b, &model)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return response, nil
