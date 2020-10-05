@@ -15,7 +15,6 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	bigquerytools "github.com/Leapforce-nl/go_bigquerytools"
-	errortools "github.com/Leapforce-nl/go_errortools"
 	types "github.com/Leapforce-nl/go_types"
 	"github.com/getsentry/sentry-go"
 	"google.golang.org/api/iterator"
@@ -240,7 +239,7 @@ func (oa *OAuth2) getTokenFromRefreshToken() error {
 
 // ValidateToken validates current token and retrieves a new one if necessary
 //
-func (oa *OAuth2) ValidateToken() error {
+func (oa *OAuth2) ValidateToken() (*Token, error) {
 	oa.lockToken()
 	defer oa.unlockToken()
 
@@ -248,7 +247,7 @@ func (oa *OAuth2) ValidateToken() error {
 		// retrieve AccessCode from BigQuery
 		err := oa.getTokenFromBigQuery()
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -256,32 +255,30 @@ func (oa *OAuth2) ValidateToken() error {
 	atTimeUTC := time.Now().In(oa.locationUTC).Add(60 * time.Second)
 
 	if oa.token.hasValidAccessToken(atTimeUTC) {
-		return nil
+		return oa.token, nil
 	}
 
 	if oa.token.hasRefreshToken() {
 		err := oa.getTokenFromRefreshToken()
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if oa.token.hasValidAccessToken(atTimeUTC) {
-			return nil
+			return oa.token, nil
 		}
 	}
 
-	oa.initTokenNeeded()
-
-	return nil
+	return nil, oa.initTokenNeeded()
 }
 
-func (oa *OAuth2) initTokenNeeded() {
-	message := "No valid accesscode or refreshcode found. Manual login needed, please run 'token' mode."
+func (oa *OAuth2) initTokenNeeded() error {
+	message := fmt.Sprintf("No valid accesscode or refreshcode found. Please generate new token by running command:\noauth2_token.exe %s %s", oa.apiName, oa.clientID)
 	fmt.Println(message)
 
 	err := &types.ErrorString{message}
 
-	errortools.FatalSentry(err, oa.isLive)
+	return err
 }
 
 func (oa *OAuth2) InitToken() error {

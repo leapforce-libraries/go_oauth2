@@ -63,7 +63,7 @@ func (oa *OAuth2) Delete(url string, buf *bytes.Buffer, model interface{}) (*htt
 }
 
 func (oa *OAuth2) getHTTPClient() (*http.Client, error) {
-	err := oa.ValidateToken()
+	_, err := oa.ValidateToken()
 	if err != nil {
 		return nil, err
 	}
