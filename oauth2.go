@@ -36,6 +36,7 @@ type OAuth2 struct {
 	authURL         string
 	tokenURL        string
 	tokenHTTPMethod string
+	tokenFunction   func() (*Token, error)
 	token           *Token
 	bigQuery        *bigquerytools.BigQuery
 	isLive          bool
@@ -269,6 +270,13 @@ func (oa *OAuth2) ValidateToken() (*Token, error) {
 		}
 	}
 
+	if oa.tokenFunction != nil {
+		err := oa.getTokenFromFunction()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return nil, oa.initTokenNeeded()
 }
 
@@ -315,6 +323,30 @@ func (oa *OAuth2) InitToken() error {
 	})
 
 	http.ListenAndServe(":8080", nil)
+
+	return nil
+}
+
+func (oa *OAuth2) getTokenFromFunction() error {
+	fmt.Println("***getTokenFromFunction***")
+
+	if oa.tokenFunction == nil {
+		return &types.ErrorString{"No TokenFunction defined."}
+	}
+
+	token, err := oa.tokenFunction()
+	if err != nil {
+		return err
+	}
+
+	oa.token.Print()
+
+	oa.token = token
+
+	err = oa.saveTokenToBigQuery()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
