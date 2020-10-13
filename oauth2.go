@@ -231,7 +231,9 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 }
 
 func (oa *OAuth2) setToken(token *Token) error {
+	fmt.Println("setToken")
 	if token != nil {
+		fmt.Println(*token)
 
 		if token.ExpiresIn != nil {
 			fmt.Println(*token.ExpiresIn)
