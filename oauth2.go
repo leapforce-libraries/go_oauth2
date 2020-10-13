@@ -36,11 +36,23 @@ type OAuth2 struct {
 	authURL         string
 	tokenURL        string
 	tokenHTTPMethod string
-	tokenFunction   func() (*Token, error)
+	tokenFunction   *func() (*Token, error)
 	token           *Token
 	bigQuery        *bigquerytools.BigQuery
 	isLive          bool
 	locationUTC     *time.Location
+}
+
+type OAuth2Config struct {
+	ApiName         string
+	ClientID        string
+	ClientSecret    string
+	Scope           string
+	RedirectURL     string
+	AuthURL         string
+	TokenURL        string
+	TokenHTTPMethod string
+	TokenFunction   *func() (*Token, error)
 }
 
 type ApiError struct {
@@ -48,16 +60,17 @@ type ApiError struct {
 	Description string `json:"error_description,omitempty"`
 }
 
-func NewOAuth(apiName string, clientID string, clienSecret string, scope string, redirectURL string, authURL string, tokenURL string, tokenHTTPMethod string, bigquery *bigquerytools.BigQuery, isLive bool) *OAuth2 {
+func NewOAuth(config OAuth2Config, bigquery *bigquerytools.BigQuery, isLive bool) *OAuth2 {
 	_oAuth2 := new(OAuth2)
-	_oAuth2.apiName = apiName
-	_oAuth2.clientID = clientID
-	_oAuth2.clientSecret = clienSecret
-	_oAuth2.scope = scope
-	_oAuth2.redirectURL = redirectURL
-	_oAuth2.authURL = authURL
-	_oAuth2.tokenURL = tokenURL
-	_oAuth2.tokenHTTPMethod = tokenHTTPMethod
+	_oAuth2.apiName = config.ApiName
+	_oAuth2.clientID = config.ClientID
+	_oAuth2.clientSecret = config.ClientSecret
+	_oAuth2.scope = config.Scope
+	_oAuth2.redirectURL = config.RedirectURL
+	_oAuth2.authURL = config.AuthURL
+	_oAuth2.tokenURL = config.TokenURL
+	_oAuth2.tokenHTTPMethod = config.TokenHTTPMethod
+	_oAuth2.tokenFunction = config.TokenFunction
 	_oAuth2.bigQuery = bigquery
 	_oAuth2.isLive = isLive
 
@@ -334,7 +347,7 @@ func (oa *OAuth2) getTokenFromFunction() error {
 		return &types.ErrorString{"No TokenFunction defined."}
 	}
 
-	token, err := oa.tokenFunction()
+	token, err := (*oa.tokenFunction)()
 	if err != nil {
 		return err
 	}
