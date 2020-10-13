@@ -287,6 +287,8 @@ func (oa *OAuth2) ValidateToken() (*Token, error) {
 		err := oa.getTokenFromFunction()
 		if err != nil {
 			return nil, err
+		} else {
+			return oa.token, nil
 		}
 	}
 
