@@ -186,37 +186,80 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 		return err
 	}
 
-	if token.ExpiresIn != nil {
-		var expiresInInt int64
-		var expiresInString string
-		err := json.Unmarshal(*token.ExpiresIn, &expiresInInt)
-		if err != nil {
-			err = json.Unmarshal(*token.ExpiresIn, &expiresInString)
+	/*
 
-			if err == nil {
-				expiresInInt, err = strconv.ParseInt(expiresInString, 10, 64)
+		if token.ExpiresIn != nil {
+			var expiresInInt int64
+			var expiresInString string
+			err := json.Unmarshal(*token.ExpiresIn, &expiresInInt)
+			if err != nil {
+				err = json.Unmarshal(*token.ExpiresIn, &expiresInString)
+
+				if err == nil {
+					expiresInInt, err = strconv.ParseInt(expiresInString, 10, 64)
+				}
 			}
+
+			if err != nil {
+				return &types.ErrorString{fmt.Sprintf("Cannot convert ExpiresIn %s to Int64.", fmt.Sprintf("%v", *token.ExpiresIn))}
+			}
+
+			//convert to UTC
+			expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(oa.locationUTC)
+			token.Expiry = &expiry
+		} else {
+			token.Expiry = nil
 		}
 
-		if err != nil {
-			return &types.ErrorString{fmt.Sprintf("Cannot convert ExpiresIn %s to Int64.", fmt.Sprintf("%v", *token.ExpiresIn))}
-		}
+		token.Print()
 
-		//convert to UTC
-		expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(oa.locationUTC)
-		token.Expiry = &expiry
-	} else {
-		token.Expiry = nil
+
+		oa.token = &token
+	*/
+
+	err = oa.SetToken(&token)
+	if err != nil {
+		return err
 	}
-
-	token.Print()
-
-	oa.token = &token
 
 	err = oa.saveTokenToBigQuery()
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (oa *OAuth2) SetToken(token *Token) error {
+	if token != nil {
+
+		if token.ExpiresIn != nil {
+			var expiresInInt int64
+			var expiresInString string
+			err := json.Unmarshal(*token.ExpiresIn, &expiresInInt)
+			if err != nil {
+				err = json.Unmarshal(*token.ExpiresIn, &expiresInString)
+
+				if err == nil {
+					expiresInInt, err = strconv.ParseInt(expiresInString, 10, 64)
+				}
+			}
+
+			if err != nil {
+				return &types.ErrorString{fmt.Sprintf("Cannot convert ExpiresIn %s to Int64.", fmt.Sprintf("%v", *token.ExpiresIn))}
+			}
+
+			//convert to UTC
+			expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(oa.locationUTC)
+			token.Expiry = &expiry
+		} else {
+			token.Expiry = nil
+		}
+	}
+
+	token.Print()
+
+	oa.token = token
 
 	return nil
 }
@@ -354,9 +397,10 @@ func (oa *OAuth2) getTokenFromFunction() error {
 		return err
 	}
 
-	oa.token.Print()
-
-	oa.token = token
+	err = oa.SetToken(token)
+	if err != nil {
+		return err
+	}
 
 	err = oa.saveTokenToBigQuery()
 	if err != nil {
