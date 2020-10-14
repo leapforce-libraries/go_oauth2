@@ -233,11 +233,7 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 func (oa *OAuth2) setToken(token *Token) error {
 	fmt.Println("setToken")
 	if token != nil {
-		fmt.Println(*token)
-
 		if token.ExpiresIn != nil {
-			fmt.Println(*token.ExpiresIn)
-
 			var expiresInInt int64
 			var expiresInString string
 			err := json.Unmarshal(*token.ExpiresIn, &expiresInInt)
@@ -256,8 +252,6 @@ func (oa *OAuth2) setToken(token *Token) error {
 			//convert to UTC
 			expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(oa.locationUTC)
 			token.Expiry = &expiry
-
-			fmt.Println(expiry)
 		} else {
 			token.Expiry = nil
 		}
