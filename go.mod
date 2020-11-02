@@ -1,4 +1,4 @@
-module github.com/Leapforce-nl/go_oauth2
+module github.com/leapforce-libraries/go_oauth2
 
 go 1.13
 
