@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"cloud.google.com/go/bigquery"
-	bigquerytools "github.com/Leapforce-nl/go_bigquerytools"
-	types "github.com/Leapforce-nl/go_types"
 	"github.com/getsentry/sentry-go"
+	bigquerytools "github.com/leapforce-libraries/go_bigquerytools"
+	types "github.com/leapforce-libraries/go_types"
 	"google.golang.org/api/iterator"
 )
 

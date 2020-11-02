@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	types "github.com/Leapforce-nl/go_types"
+	types "github.com/leapforce-libraries/go_types"
 )
 
 // Get returns http.Response for generic oAuth2 Get http call
