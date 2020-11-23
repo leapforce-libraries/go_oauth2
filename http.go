@@ -8,88 +8,87 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	types "github.com/leapforce-libraries/go_types"
+	errortools "github.com/leapforce-libraries/go_errortools"
 )
 
 // Get returns http.Response for generic oAuth2 Get http call
 //
-func (oa *OAuth2) Get(url string, model interface{}) (*http.Response, error) {
+func (oa *OAuth2) Get(url string, model interface{}) (*http.Response, *errortools.Error) {
 	//fmt.Println("GET ", url)
 	return oa.httpRequest(http.MethodGet, url, nil, model)
 }
 
 // Post returns http.Response for generic oAuth2 Post http call
 //
-func (oa *OAuth2) Post(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
+func (oa *OAuth2) Post(url string, buf *bytes.Buffer, model interface{}) (*http.Response, *errortools.Error) {
 	//fmt.Println("POST ", url)
 	if buf == nil {
 		return oa.httpRequest(http.MethodPost, url, nil, model)
-	} else {
-		return oa.httpRequest(http.MethodPost, url, buf, model)
 	}
+	return oa.httpRequest(http.MethodPost, url, buf, model)
 }
 
 // Put returns http.Response for generic oAuth2 Put http call
 //
-func (oa *OAuth2) Put(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
+func (oa *OAuth2) Put(url string, buf *bytes.Buffer, model interface{}) (*http.Response, *errortools.Error) {
 	//fmt.Println("PUT ", url)
 	if buf == nil {
 		return oa.httpRequest(http.MethodPut, url, nil, model)
-	} else {
-		return oa.httpRequest(http.MethodPut, url, buf, model)
 	}
+	return oa.httpRequest(http.MethodPut, url, buf, model)
 }
 
 // Patch returns http.Response for generic oAuth2 Patch http call
 //
-func (oa *OAuth2) Patch(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
+func (oa *OAuth2) Patch(url string, buf *bytes.Buffer, model interface{}) (*http.Response, *errortools.Error) {
 	//fmt.Println("PATCH ", url)
 	if buf == nil {
 		return oa.httpRequest(http.MethodPatch, url, nil, model)
-	} else {
-		return oa.httpRequest(http.MethodPatch, url, buf, model)
 	}
+	return oa.httpRequest(http.MethodPatch, url, buf, model)
 }
 
 // Delete returns http.Response for generic oAuth2 Delete http call
 //
-func (oa *OAuth2) Delete(url string, buf *bytes.Buffer, model interface{}) (*http.Response, error) {
+func (oa *OAuth2) Delete(url string, buf *bytes.Buffer, model interface{}) (*http.Response, *errortools.Error) {
 	//fmt.Println("DELETE ", url)
 	if buf == nil {
 		return oa.httpRequest(http.MethodDelete, url, nil, model)
-	} else {
-		return oa.httpRequest(http.MethodDelete, url, buf, model)
 	}
+	return oa.httpRequest(http.MethodDelete, url, buf, model)
 }
 
-func (oa *OAuth2) getHTTPClient() (*http.Client, error) {
+func (oa *OAuth2) getHTTPClient() (*http.Client, *errortools.Error) {
 	_, err := oa.ValidateToken()
 	if err != nil {
-		return nil, err
+		return nil, errortools.ErrorMessage(err)
 	}
 
 	return new(http.Client), nil
 }
 
-func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, model interface{}) (*http.Response, error) {
-	client, err := oa.getHTTPClient()
-	if err != nil {
-		return nil, err
+func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, model interface{}) (*http.Response, *errortools.Error) {
+	client, e := oa.getHTTPClient()
+	if e != nil {
+		return nil, e
 	}
 
 	req, err := http.NewRequest(httpMethod, url, body)
+	e = &errortools.Error{Request: req}
 	if err != nil {
-		return nil, err
+		return nil, errortools.ErrorMessage(err)
 	}
 
 	oa.lockToken()
 
 	if oa.token == nil {
-		return nil, &types.ErrorString{"No Token."}
+		e.SetMessage("No Token.")
+		return nil, e
 	}
 
 	if (*oa.token).AccessToken == nil {
-		return nil, &types.ErrorString{"No AccessToken."}
+		e.SetMessage("No AccessToken.")
+		return nil, e
 	}
 
 	accessToken := *((*oa.token).AccessToken)
@@ -104,6 +103,7 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 
 	// Send out the HTTP request
 	response, err := client.Do(req)
+	e.SetResponse(response)
 
 	oa.unlockToken()
 
@@ -115,11 +115,12 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 		fmt.Println(accessToken)
 		//return nil, oa.printError(response)
 
-		message := fmt.Sprintf("Server returned statuscode %v", response.StatusCode)
-		return response, &types.ErrorString{message}
+		e.SetMessage(fmt.Sprintf("Server returned statuscode %v", response.StatusCode))
+		return response, e
 	}
 	if err != nil {
-		return response, err
+		e.SetMessage(err)
+		return response, e
 	}
 
 	if model != nil {
@@ -127,12 +128,14 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 
 		b, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			return nil, err
+			e.SetMessage(err)
+			return nil, e
 		}
 
 		err = json.Unmarshal(b, &model)
 		if err != nil {
-			return nil, err
+			e.SetMessage(err)
+			return nil, e
 		}
 	}
 

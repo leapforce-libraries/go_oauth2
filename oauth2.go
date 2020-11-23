@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,9 +13,8 @@ import (
 	"time"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/getsentry/sentry-go"
 	bigquerytools "github.com/leapforce-libraries/go_bigquerytools"
-	types "github.com/leapforce-libraries/go_types"
+	errortools "github.com/leapforce-libraries/go_errortools"
 	"google.golang.org/api/iterator"
 )
 
@@ -84,10 +82,12 @@ func (oa *OAuth2) lockToken() {
 	tokenMutex.Lock()
 }
 
-func (oa *OAuth2) GetToken(params *url.Values) error {
+func (oa *OAuth2) GetToken(params *url.Values) *errortools.Error {
 	request := new(http.Request)
 
 	fmt.Println(oa.tokenHTTPMethod)
+
+	e := new(errortools.Error)
 
 	if oa.tokenHTTPMethod == http.MethodGet {
 		url := oa.tokenURL
@@ -116,8 +116,10 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Set("Accept", "application/json")
+		e.SetRequest(req)
 		if err != nil {
-			return err
+			e.SetMessage(err)
+			return e
 		}
 
 		request = req
@@ -134,21 +136,26 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Content-Length", strconv.Itoa(len(encoded)))
 		req.Header.Set("Accept", "application/json")
+		e.SetRequest(req)
 		if err != nil {
-			return err
+			e.SetMessage(err)
+			return e
 		}
 
 		request = req
 	} else {
-		return &types.ErrorString{fmt.Sprintf("Invalid TokenHTTPMethod: %s", oa.tokenHTTPMethod)}
+		e.SetMessage(fmt.Sprintf("Invalid TokenHTTPMethod: %s", oa.tokenHTTPMethod))
+		return e
 	}
 
 	httpClient := http.Client{}
 
 	// Send out the HTTP request
 	res, err := httpClient.Do(request)
+	e.SetResponse(res)
 	if err != nil {
-		return err
+		e.SetMessage(err)
+		return e
 	}
 
 	defer res.Body.Close()
@@ -160,77 +167,49 @@ func (oa *OAuth2) GetToken(params *url.Values) error {
 
 		err = json.Unmarshal(b, &eoError)
 		if err != nil {
-			return err
+			e.SetMessage(err)
+			return e
 		}
 
-		message := fmt.Sprintln("Error:", res.StatusCode, eoError.Error, ", ", eoError.Description)
-		fmt.Println(message)
+		//message := fmt.Sprintln("Error:", res.StatusCode, eoError.Error, ", ", eoError.Description)
+		//fmt.Println(message)
 
 		oa.token.Print()
 
 		if res.StatusCode == 401 {
-			if oa.isLive {
+			/*if oa.isLive {
+				message := fmt.Sprintln("Error:", res.StatusCode, eoError.Error, ", ", eoError.Description)
 				sentry.CaptureMessage(fmt.Sprintf("%s refreshtoken not valid, login needed to retrieve a new one. Error: %s", oa.apiName, message))
-			}
-			oa.initTokenNeeded()
+			}*/
+			return oa.initTokenNeeded()
 		}
 
-		return &types.ErrorString{fmt.Sprintf("Server returned statuscode %v, url: %s", res.StatusCode, request.URL)}
+		e.SetMessage(fmt.Sprintf("Server returned statuscode %v, url: %s", res.StatusCode, request.URL))
+		return e
 	}
 
 	token := Token{}
 
 	err = json.Unmarshal(b, &token)
 	if err != nil {
-		log.Println(err)
-		return err
+		e.SetMessage(err)
+		return e
 	}
 
-	/*
-
-		if token.ExpiresIn != nil {
-			var expiresInInt int64
-			var expiresInString string
-			err := json.Unmarshal(*token.ExpiresIn, &expiresInInt)
-			if err != nil {
-				err = json.Unmarshal(*token.ExpiresIn, &expiresInString)
-
-				if err == nil {
-					expiresInInt, err = strconv.ParseInt(expiresInString, 10, 64)
-				}
-			}
-
-			if err != nil {
-				return &types.ErrorString{fmt.Sprintf("Cannot convert ExpiresIn %s to Int64.", fmt.Sprintf("%v", *token.ExpiresIn))}
-			}
-
-			//convert to UTC
-			expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(oa.locationUTC)
-			token.Expiry = &expiry
-		} else {
-			token.Expiry = nil
-		}
-
-		token.Print()
-
-
-		oa.token = &token
-	*/
-
-	err = oa.setToken(&token)
-	if err != nil {
-		return err
+	ee := oa.setToken(&token)
+	if ee != nil {
+		return ee
 	}
 
-	err = oa.saveTokenToBigQuery()
-	if err != nil {
-		return err
+	ee = oa.saveTokenToBigQuery()
+	if ee != nil {
+		return ee
 	}
 
 	return nil
 }
 
-func (oa *OAuth2) setToken(token *Token) error {
+func (oa *OAuth2) setToken(token *Token) *errortools.Error {
 	fmt.Println("setToken")
 	if token != nil {
 		if token.ExpiresIn != nil {
@@ -246,7 +225,7 @@ func (oa *OAuth2) setToken(token *Token) error {
 			}
 
 			if err != nil {
-				return &types.ErrorString{fmt.Sprintf("Cannot convert ExpiresIn %s to Int64.", fmt.Sprintf("%v", *token.ExpiresIn))}
+				return errortools.ErrorMessage(fmt.Sprintf("Cannot convert ExpiresIn %s to Int64.", fmt.Sprintf("%v", *token.ExpiresIn)))
 			}
 
 			//convert to UTC
@@ -264,7 +243,7 @@ func (oa *OAuth2) setToken(token *Token) error {
 	return nil
 }
 
-func (oa *OAuth2) getTokenFromCode(code string) error {
+func (oa *OAuth2) getTokenFromCode(code string) *errortools.Error {
 	data := url.Values{}
 	data.Set("client_id", oa.clientID)
 	data.Set("client_secret", oa.clientSecret)
@@ -275,14 +254,14 @@ func (oa *OAuth2) getTokenFromCode(code string) error {
 	return oa.GetToken(&data)
 }
 
-func (oa *OAuth2) getTokenFromRefreshToken() error {
+func (oa *OAuth2) getTokenFromRefreshToken() *errortools.Error {
 	fmt.Println("***getTokenFromRefreshToken***")
 
 	//always get refresh token from BQ prior to using it
 	oa.getTokenFromBigQuery()
 
 	if !oa.token.hasRefreshToken() {
-		oa.initTokenNeeded()
+		return oa.initTokenNeeded()
 	}
 
 	data := url.Values{}
@@ -296,7 +275,7 @@ func (oa *OAuth2) getTokenFromRefreshToken() error {
 
 // ValidateToken validates current token and retrieves a new one if necessary
 //
-func (oa *OAuth2) ValidateToken() (*Token, error) {
+func (oa *OAuth2) ValidateToken() (*Token, *errortools.Error) {
 	oa.lockToken()
 	defer oa.unlockToken()
 
@@ -304,7 +283,7 @@ func (oa *OAuth2) ValidateToken() (*Token, error) {
 		// retrieve AccessCode from BigQuery
 		err := oa.getTokenFromBigQuery()
 		if err != nil {
-			return nil, err
+			return nil, errortools.ErrorMessage(err)
 		}
 	}
 
@@ -318,7 +297,7 @@ func (oa *OAuth2) ValidateToken() (*Token, error) {
 	if oa.token.hasRefreshToken() {
 		err := oa.getTokenFromRefreshToken()
 		if err != nil {
-			return nil, err
+			return nil, errortools.ErrorMessage(err)
 		}
 
 		if oa.token.hasValidAccessToken(atTimeUTC) {
@@ -329,7 +308,7 @@ func (oa *OAuth2) ValidateToken() (*Token, error) {
 	if oa.tokenFunction != nil {
 		err := oa.getTokenFromFunction()
 		if err != nil {
-			return nil, err
+			return nil, errortools.ErrorMessage(err)
 		} else {
 			return oa.token, nil
 		}
@@ -338,19 +317,17 @@ func (oa *OAuth2) ValidateToken() (*Token, error) {
 	return nil, oa.initTokenNeeded()
 }
 
-func (oa *OAuth2) initTokenNeeded() error {
+func (oa *OAuth2) initTokenNeeded() *errortools.Error {
 	message := fmt.Sprintf("No valid accesscode or refreshcode found. Please generate new token by running command:\noauth2_token.exe %s %s", oa.apiName, oa.clientID)
 	fmt.Println(message)
 
-	err := &types.ErrorString{message}
-
-	return err
+	return errortools.ErrorMessage(message)
 }
 
-func (oa *OAuth2) InitToken() error {
+func (oa *OAuth2) InitToken() *errortools.Error {
 
 	if oa == nil {
-		return &types.ErrorString{fmt.Sprintf("%s variable not initialized", oa.apiName)}
+		return errortools.ErrorMessage(fmt.Sprintf("%s variable not initialized", oa.apiName))
 	}
 
 	url2 := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", oa.authURL, oa.clientID, url.PathEscape(oa.redirectURL), url.PathEscape(oa.scope))
@@ -370,9 +347,9 @@ func (oa *OAuth2) InitToken() error {
 		}
 		code := r.FormValue("code")
 
-		err = oa.getTokenFromCode(code)
-		if err != nil {
-			fmt.Println(err)
+		ee := oa.getTokenFromCode(code)
+		if ee != nil {
+			fmt.Println(ee.Message)
 		}
 
 		w.WriteHeader(http.StatusFound)
@@ -385,38 +362,38 @@ func (oa *OAuth2) InitToken() error {
 	return nil
 }
 
-func (oa *OAuth2) getTokenFromFunction() error {
+func (oa *OAuth2) getTokenFromFunction() *errortools.Error {
 	fmt.Println("***getTokenFromFunction***")
 
 	if oa.tokenFunction == nil {
-		return &types.ErrorString{"No TokenFunction defined."}
+		return errortools.ErrorMessage("No TokenFunction defined.")
 	}
 
 	token, err := (*oa.tokenFunction)()
 	if err != nil {
-		return err
+		return errortools.ErrorMessage(err)
 	}
 
-	err = oa.setToken(token)
-	if err != nil {
-		return err
+	ee := oa.setToken(token)
+	if ee != nil {
+		return ee
 	}
 
-	err = oa.saveTokenToBigQuery()
-	if err != nil {
-		return err
+	ee = oa.saveTokenToBigQuery()
+	if ee != nil {
+		return ee
 	}
 
 	return nil
 }
 
-func (oa *OAuth2) getTokenFromBigQuery() error {
+func (oa *OAuth2) getTokenFromBigQuery() *errortools.Error {
 	fmt.Println("***getTokenFromBigQuery***")
 	// create client
 	bqClient, err := oa.bigQuery.CreateClient()
 	if err != nil {
 		fmt.Println("\nerror in BigQueryCreateClient")
-		return err
+		return errortools.ErrorMessage(err)
 	}
 
 	ctx := context.Background()
@@ -427,7 +404,7 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 	q := bqClient.Query(sql)
 	it, err := q.Read(ctx)
 	if err != nil {
-		return err
+		return errortools.ErrorMessage(err)
 	}
 
 	type TokenBQ struct {
@@ -446,8 +423,7 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 			break
 		}
 		if err != nil {
-			fmt.Println(err)
-			return err
+			return errortools.ErrorMessage(err)
 		}
 
 		break
@@ -475,12 +451,11 @@ func (oa *OAuth2) getTokenFromBigQuery() error {
 	return nil
 }
 
-func (oa *OAuth2) saveTokenToBigQuery() error {
+func (oa *OAuth2) saveTokenToBigQuery() *errortools.Error {
 	// create client
 	bqClient, err := oa.bigQuery.CreateClient()
 	if err != nil {
-		fmt.Println("\nerror in BigQueryCreateClient")
-		return err
+		return errortools.ErrorMessage(err)
 	}
 
 	ctx := context.Background()
@@ -545,17 +520,17 @@ func (oa *OAuth2) saveTokenToBigQuery() error {
 
 	job, err := q.Run(ctx)
 	if err != nil {
-		return err
+		return errortools.ErrorMessage(err)
 	}
 
 	for {
 		status, err := job.Status(ctx)
 		if err != nil {
-			return err
+			return errortools.ErrorMessage(err)
 		}
 		if status.Done() {
 			if status.Err() != nil {
-				return status.Err()
+				return errortools.ErrorMessage(status.Err())
 			}
 			break
 		}
