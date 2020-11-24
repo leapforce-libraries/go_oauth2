@@ -73,22 +73,24 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 		return nil, nil, e
 	}
 
+	e = new(errortools.Error)
+
 	request, err := http.NewRequest(httpMethod, url, body)
-	e = &errortools.Error{Request: request}
+	e.SetRequest(request)
 	if err != nil {
-		return nil, nil, errortools.ErrorMessage(err)
+		return request, nil, errortools.ErrorMessage(err)
 	}
 
 	oa.lockToken()
 
 	if oa.token == nil {
 		e.SetMessage("No Token.")
-		return nil, nil, e
+		return request, nil, e
 	}
 
 	if (*oa.token).AccessToken == nil {
 		e.SetMessage("No AccessToken.")
-		return nil, nil, e
+		return request, nil, e
 	}
 
 	accessToken := *((*oa.token).AccessToken)
