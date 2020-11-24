@@ -390,10 +390,10 @@ func (oa *OAuth2) getTokenFromFunction() *errortools.Error {
 func (oa *OAuth2) getTokenFromBigQuery() *errortools.Error {
 	fmt.Println("***getTokenFromBigQuery***")
 	// create client
-	bqClient, err := oa.bigQuery.CreateClient()
-	if err != nil {
+	bqClient, e := oa.bigQuery.CreateClient()
+	if e != nil {
 		fmt.Println("\nerror in BigQueryCreateClient")
-		return errortools.ErrorMessage(err)
+		return errortools.ErrorMessage(e)
 	}
 
 	ctx := context.Background()
@@ -453,9 +453,9 @@ func (oa *OAuth2) getTokenFromBigQuery() *errortools.Error {
 
 func (oa *OAuth2) saveTokenToBigQuery() *errortools.Error {
 	// create client
-	bqClient, err := oa.bigQuery.CreateClient()
-	if err != nil {
-		return errortools.ErrorMessage(err)
+	bqClient, e := oa.bigQuery.CreateClient()
+	if e != nil {
+		return e
 	}
 
 	ctx := context.Background()
