@@ -124,7 +124,6 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 		err2 := unmarshalError(response, modelError)
 		errortools.CaptureError(err2, oa.isLive)
 
-		e.SetMessage(err)
 		return request, response, e
 	}
 
