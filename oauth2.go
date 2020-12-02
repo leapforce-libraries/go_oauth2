@@ -35,7 +35,7 @@ type OAuth2 struct {
 	authURL               string
 	tokenURL              string
 	tokenHTTPMethod       string
-	tokenFunction         *func() (*Token, error)
+	tokenFunction         *func() (*Token, *errortools.Error)
 	token                 *Token
 	bigQuery              *bigquerytools.BigQuery
 	isLive                bool
@@ -53,7 +53,7 @@ type OAuth2Config struct {
 	AuthURL               string
 	TokenURL              string
 	TokenHTTPMethod       string
-	TokenFunction         *func() (*Token, error)
+	TokenFunction         *func() (*Token, *errortools.Error)
 	MaxRetries            *uint
 	SecondsBetweenRetries *uint32
 }
@@ -320,9 +320,9 @@ func (oa *OAuth2) ValidateToken() (*Token, *errortools.Error) {
 	}
 
 	if oa.tokenFunction != nil {
-		err := oa.getTokenFromFunction()
-		if err != nil {
-			return nil, errortools.ErrorMessage(err)
+		e := oa.getTokenFromFunction()
+		if e != nil {
+			return nil, e
 		} else {
 			return oa.token, nil
 		}
@@ -383,9 +383,9 @@ func (oa *OAuth2) getTokenFromFunction() *errortools.Error {
 		return errortools.ErrorMessage("No TokenFunction defined.")
 	}
 
-	token, err := (*oa.tokenFunction)()
-	if err != nil {
-		return errortools.ErrorMessage(err)
+	token, e := (*oa.tokenFunction)()
+	if e != nil {
+		return e
 	}
 
 	ee := oa.setToken(token)

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	types "github.com/leapforce-libraries/go_types"
+	errortools "github.com/leapforce-libraries/go_errortools"
 )
 
 var tokenMutex sync.Mutex
@@ -103,12 +103,12 @@ func (t *Token) hasRefreshToken() bool {
 	return true
 }
 
-func (t *Token) isExpired() (bool, error) {
+func (t *Token) isExpired() (bool, *errortools.Error) {
 	if t == nil {
-		return true, &types.ErrorString{"Token is nil."}
+		return true, errortools.ErrorMessage("Token is nil.")
 	}
 	if !t.hasAccessToken() {
-		return true, &types.ErrorString{"Token is not valid."}
+		return true, errortools.ErrorMessage("Token is not valid.")
 	}
 	if t.Expiry.Add(-60 * time.Second).Before(time.Now()) {
 		return true, nil
