@@ -107,21 +107,6 @@ func (oa *OAuth2) GetToken(params *url.Values) *errortools.Error {
 	if oa.tokenHTTPMethod == http.MethodGet {
 		url := oa.tokenURL
 
-		/*index := 0
-		for key, value := range *params {
-			valueString := ""
-			if len(value) > 0 {
-				valueString = value[0]
-			}
-
-			if index == 0 {
-				url = fmt.Sprintf("%s?%s=%s", url, key, valueString)
-			} else {
-				url = fmt.Sprintf("%s&%s=%s", url, key, valueString)
-			}
-			index++
-		}*/
-
 		if params != nil {
 			if len(*params) > 0 {
 				url = fmt.Sprintf("%s?%s", url, (*params).Encode())
