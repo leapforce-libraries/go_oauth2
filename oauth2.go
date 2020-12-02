@@ -15,6 +15,7 @@ import (
 	"cloud.google.com/go/bigquery"
 	bigquerytools "github.com/leapforce-libraries/go_bigquerytools"
 	errortools "github.com/leapforce-libraries/go_errortools"
+	utilities "github.com/leapforce-libraries/go_utilities"
 	"google.golang.org/api/iterator"
 )
 
@@ -26,31 +27,35 @@ const (
 //
 type OAuth2 struct {
 	// config
-	apiName         string
-	clientID        string
-	clientSecret    string
-	scope           string
-	redirectURL     string
-	authURL         string
-	tokenURL        string
-	tokenHTTPMethod string
-	tokenFunction   *func() (*Token, error)
-	token           *Token
-	bigQuery        *bigquerytools.BigQuery
-	isLive          bool
-	locationUTC     *time.Location
+	apiName               string
+	clientID              string
+	clientSecret          string
+	scope                 string
+	redirectURL           string
+	authURL               string
+	tokenURL              string
+	tokenHTTPMethod       string
+	tokenFunction         *func() (*Token, error)
+	token                 *Token
+	bigQuery              *bigquerytools.BigQuery
+	isLive                bool
+	locationUTC           *time.Location
+	maxRetries            uint
+	secondsBetweenRetries uint32
 }
 
 type OAuth2Config struct {
-	ApiName         string
-	ClientID        string
-	ClientSecret    string
-	Scope           string
-	RedirectURL     string
-	AuthURL         string
-	TokenURL        string
-	TokenHTTPMethod string
-	TokenFunction   *func() (*Token, error)
+	ApiName               string
+	ClientID              string
+	ClientSecret          string
+	Scope                 string
+	RedirectURL           string
+	AuthURL               string
+	TokenURL              string
+	TokenHTTPMethod       string
+	TokenFunction         *func() (*Token, error)
+	MaxRetries            *uint
+	SecondsBetweenRetries *uint32
 }
 
 type ApiError struct {
@@ -59,23 +64,34 @@ type ApiError struct {
 }
 
 func NewOAuth(config OAuth2Config, bigquery *bigquerytools.BigQuery, isLive bool) *OAuth2 {
-	_oAuth2 := new(OAuth2)
-	_oAuth2.apiName = config.ApiName
-	_oAuth2.clientID = config.ClientID
-	_oAuth2.clientSecret = config.ClientSecret
-	_oAuth2.scope = config.Scope
-	_oAuth2.redirectURL = config.RedirectURL
-	_oAuth2.authURL = config.AuthURL
-	_oAuth2.tokenURL = config.TokenURL
-	_oAuth2.tokenHTTPMethod = config.TokenHTTPMethod
-	_oAuth2.tokenFunction = config.TokenFunction
-	_oAuth2.bigQuery = bigquery
-	_oAuth2.isLive = isLive
-
+	oa := new(OAuth2)
+	oa.apiName = config.ApiName
+	oa.clientID = config.ClientID
+	oa.clientSecret = config.ClientSecret
+	oa.scope = config.Scope
+	oa.redirectURL = config.RedirectURL
+	oa.authURL = config.AuthURL
+	oa.tokenURL = config.TokenURL
+	oa.tokenHTTPMethod = config.TokenHTTPMethod
+	oa.tokenFunction = config.TokenFunction
+	oa.bigQuery = bigquery
+	oa.isLive = isLive
 	locUTC, _ := time.LoadLocation("UTC")
-	_oAuth2.locationUTC = locUTC
+	oa.locationUTC = locUTC
 
-	return _oAuth2
+	if config.MaxRetries != nil {
+		oa.maxRetries = *config.MaxRetries
+	} else {
+		oa.maxRetries = 0
+	}
+
+	if config.SecondsBetweenRetries != nil {
+		oa.secondsBetweenRetries = *config.SecondsBetweenRetries
+	} else {
+		oa.secondsBetweenRetries = 3
+	}
+
+	return oa
 }
 
 func (oa *OAuth2) lockToken() {
@@ -151,10 +167,8 @@ func (oa *OAuth2) GetToken(params *url.Values) *errortools.Error {
 	httpClient := http.Client{}
 
 	// Send out the HTTP request
-	res, err := httpClient.Do(request)
-	e.SetResponse(res)
-	if err != nil {
-		e.SetMessage(err)
+	res, e := utilities.DoWithRetry(&httpClient, request, oa.maxRetries, oa.secondsBetweenRetries)
+	if e != nil {
 		return e
 	}
 
