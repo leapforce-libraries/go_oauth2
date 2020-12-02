@@ -11,7 +11,6 @@ import (
 
 	errortools "github.com/leapforce-libraries/go_errortools"
 	utilities "github.com/leapforce-libraries/go_utilities"
-	"github.com/pkg/errors"
 )
 
 // Get returns http.Response for generic oAuth2 Get http call
@@ -103,11 +102,6 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 
 	// Send out the HTTP request
 	response, e := utilities.DoWithRetry(client, request, oa.maxRetries, oa.secondsBetweenRetries)
-	if e != nil {
-		return request, response, e
-	}
-	//response, err := client.Do(request)
-	//e.SetResponse(response)
 
 	oa.unlockToken()
 
@@ -118,9 +112,15 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 		fmt.Println("StatusCode", response.StatusCode)
 		fmt.Println(accessToken)
 
-		err = errors.Errorf("Server returned statuscode %v", response.StatusCode)
+		if e == nil {
+			e = new(errortools.Error)
+			e.SetRequest(request)
+			e.SetResponse(response)
+		}
+
+		e.SetMessage(fmt.Sprintf("Server returned statuscode %v", response.StatusCode))
 	}
-	if err != nil {
+	if e != nil {
 		err2 := unmarshalError(response, modelError)
 		errortools.CaptureError(err2, oa.isLive)
 
