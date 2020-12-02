@@ -7,55 +7,52 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 
 	errortools "github.com/leapforce-libraries/go_errortools"
+	"github.com/pkg/errors"
 )
 
 // Get returns http.Response for generic oAuth2 Get http call
 //
-func (oa *OAuth2) Get(url string, model interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	//fmt.Println("GET ", url)
-	return oa.httpRequest(http.MethodGet, url, nil, model)
+func (oa *OAuth2) Get(url string, model interface{}, modelError interface{}) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodGet, url, nil, model, modelError)
 }
 
 // Post returns http.Response for generic oAuth2 Post http call
 //
-func (oa *OAuth2) Post(url string, buf *bytes.Buffer, model interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	//fmt.Println("POST ", url)
+func (oa *OAuth2) Post(url string, buf *bytes.Buffer, model interface{}, modelError interface{}) (*http.Request, *http.Response, *errortools.Error) {
 	if buf == nil {
-		return oa.httpRequest(http.MethodPost, url, nil, model)
+		return oa.httpRequest(http.MethodPost, url, nil, model, modelError)
 	}
-	return oa.httpRequest(http.MethodPost, url, buf, model)
+	return oa.httpRequest(http.MethodPost, url, buf, model, modelError)
 }
 
 // Put returns http.Response for generic oAuth2 Put http call
 //
-func (oa *OAuth2) Put(url string, buf *bytes.Buffer, model interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	//fmt.Println("PUT ", url)
+func (oa *OAuth2) Put(url string, buf *bytes.Buffer, model interface{}, modelError interface{}) (*http.Request, *http.Response, *errortools.Error) {
 	if buf == nil {
-		return oa.httpRequest(http.MethodPut, url, nil, model)
+		return oa.httpRequest(http.MethodPut, url, nil, model, modelError)
 	}
-	return oa.httpRequest(http.MethodPut, url, buf, model)
+	return oa.httpRequest(http.MethodPut, url, buf, model, modelError)
 }
 
 // Patch returns http.Response for generic oAuth2 Patch http call
 //
-func (oa *OAuth2) Patch(url string, buf *bytes.Buffer, model interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	//fmt.Println("PATCH ", url)
+func (oa *OAuth2) Patch(url string, buf *bytes.Buffer, model interface{}, modelError interface{}) (*http.Request, *http.Response, *errortools.Error) {
 	if buf == nil {
-		return oa.httpRequest(http.MethodPatch, url, nil, model)
+		return oa.httpRequest(http.MethodPatch, url, nil, model, modelError)
 	}
-	return oa.httpRequest(http.MethodPatch, url, buf, model)
+	return oa.httpRequest(http.MethodPatch, url, buf, model, modelError)
 }
 
 // Delete returns http.Response for generic oAuth2 Delete http call
 //
-func (oa *OAuth2) Delete(url string, buf *bytes.Buffer, model interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	//fmt.Println("DELETE ", url)
+func (oa *OAuth2) Delete(url string, buf *bytes.Buffer, model interface{}, modelError interface{}) (*http.Request, *http.Response, *errortools.Error) {
 	if buf == nil {
-		return oa.httpRequest(http.MethodDelete, url, nil, model)
+		return oa.httpRequest(http.MethodDelete, url, nil, model, modelError)
 	}
-	return oa.httpRequest(http.MethodDelete, url, buf, model)
+	return oa.httpRequest(http.MethodDelete, url, buf, model, modelError)
 }
 
 func (oa *OAuth2) getHTTPClient() (*http.Client, *errortools.Error) {
@@ -67,7 +64,7 @@ func (oa *OAuth2) getHTTPClient() (*http.Client, *errortools.Error) {
 	return new(http.Client), nil
 }
 
-func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, model interface{}) (*http.Request, *http.Response, *errortools.Error) {
+func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, model interface{}, modelError interface{}) (*http.Request, *http.Response, *errortools.Error) {
 	client, e := oa.getHTTPClient()
 	if e != nil {
 		return nil, nil, e
@@ -115,12 +112,13 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 		fmt.Println("url", url)
 		fmt.Println("StatusCode", response.StatusCode)
 		fmt.Println(accessToken)
-		//return nil, oa.printError(response)
 
-		e.SetMessage(fmt.Sprintf("Server returned statuscode %v", response.StatusCode))
-		return request, response, e
+		err = errors.Errorf("Server returned statuscode %v", response.StatusCode)
 	}
 	if err != nil {
+		err2 := unmarshalError(response, modelError)
+		errortools.CaptureError(err2, oa.isLive)
+
 		e.SetMessage(err)
 		return request, response, e
 	}
@@ -142,4 +140,30 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 	}
 
 	return request, response, nil
+}
+
+func unmarshalError(response *http.Response, modelError interface{}) *errortools.Error {
+	if response == nil {
+		return nil
+	}
+	if reflect.TypeOf(modelError).Kind() != reflect.Ptr {
+		return errortools.ErrorMessage("Type of modelError must be a pointer.")
+	}
+	if reflect.ValueOf(modelError).IsNil() {
+		return nil
+	}
+
+	defer response.Body.Close()
+
+	b, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return errortools.ErrorMessage(err)
+	}
+
+	err = json.Unmarshal(b, modelError)
+	if err != nil {
+		return errortools.ErrorMessage(err)
+	}
+
+	return nil
 }

@@ -231,6 +231,8 @@ github.com/leapforce-libraries/go_bigquerytools v0.0.0-20201102124458-f32e34afaa
 github.com/leapforce-libraries/go_bigquerytools v0.0.0-20201102124458-f32e34afaa2e/go.mod h1:I/IwIA/kJiTX3Gf/XZ1q45uRbF4xFZe9hK+XezrZNFg=
 github.com/leapforce-libraries/go_bigquerytools v0.0.0-20201124164101-e96642e8fafc h1:8eXMEWTiYZBn9Q6INw2feKjMGzhSmjL0RxnR1LUKaao=
 github.com/leapforce-libraries/go_bigquerytools v0.0.0-20201124164101-e96642e8fafc/go.mod h1:m5Ee50hr9NJTSujkIO93OFeCOytgdaM2ik0xUQLmzJs=
+github.com/leapforce-libraries/go_bigquerytools v0.0.0-20201127131929-ee11d040f98f h1:2Fzk6PspPqb2WVHXuYFKbjnT+53836BCdNUE2H4D+Pw=
+github.com/leapforce-libraries/go_bigquerytools v0.0.0-20201127131929-ee11d040f98f/go.mod h1:m5Ee50hr9NJTSujkIO93OFeCOytgdaM2ik0xUQLmzJs=
 github.com/leapforce-libraries/go_errortools v0.0.0-20201123201653-6392a12646fa h1:H/8iJ/YVEcoeL+jhmdO+kcB2epoq5TZGcaTX7DqzTHQ=
 github.com/leapforce-libraries/go_errortools v0.0.0-20201123201653-6392a12646fa/go.mod h1:SmFPi+pPS5oWI/PfOv25kuIOBEMgr52dezH+dsmRCfQ=
 github.com/leapforce-libraries/go_errortools v0.0.0-20201123205246-0455dad394fb h1:qdoOdx6wpm0Kn25QRHNzJkhvQHl7qVsSuWWbtBvu6x8=
@@ -241,6 +243,10 @@ github.com/leapforce-libraries/go_errortools v0.0.0-20201124224510-4c34e4c191c7 
 github.com/leapforce-libraries/go_errortools v0.0.0-20201124224510-4c34e4c191c7/go.mod h1:SmFPi+pPS5oWI/PfOv25kuIOBEMgr52dezH+dsmRCfQ=
 github.com/leapforce-libraries/go_errortools v0.0.0-20201125183139-3ec0c572245f h1:TUpT0m8noe3dAwjcaiiv9lxxlMbI3XdpjOjdO7DASQg=
 github.com/leapforce-libraries/go_errortools v0.0.0-20201125183139-3ec0c572245f/go.mod h1:SmFPi+pPS5oWI/PfOv25kuIOBEMgr52dezH+dsmRCfQ=
+github.com/leapforce-libraries/go_errortools v0.0.0-20201127000443-4bf010809ac1 h1:2e385pSwGoxCIR/cQsa4fB+NxZmmjOQJ0rIPW5IbPKA=
+github.com/leapforce-libraries/go_errortools v0.0.0-20201127000443-4bf010809ac1/go.mod h1:SmFPi+pPS5oWI/PfOv25kuIOBEMgr52dezH+dsmRCfQ=
+github.com/leapforce-libraries/go_errortools v0.0.0-20201201173353-36163d22d838 h1:1wns5BKCD7eZrGFU4ug6IKlgvItXlu96cNAD6CTySgA=
+github.com/leapforce-libraries/go_errortools v0.0.0-20201201173353-36163d22d838/go.mod h1:SmFPi+pPS5oWI/PfOv25kuIOBEMgr52dezH+dsmRCfQ=
 github.com/leapforce-libraries/go_types v0.0.0-20201101222114-6d3ec3839c8c h1:4GY1e071Gyk2sBn8mMVi2rI+DUnqIUP3/IAHvND39w8=
 github.com/leapforce-libraries/go_types v0.0.0-20201101222114-6d3ec3839c8c/go.mod h1:0k0QPi4o2OO3yau759B2U5XIEPbuYTf56QxyF8WdV4o=
 github.com/leapforce-libraries/go_types v0.0.0-20201116193520-d5f73916424b h1:HyAuC9pOtQ0yIw7Nkb/R/RxEEyz9lOH88A4UONVhOEo=
@@ -273,7 +279,10 @@ github.com/onsi/ginkgo v1.10.3/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+
 github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7JYyY=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pingcap/errors v0.11.4/go.mod h1:Oi8TUi2kEtXXLMJk9l1cGmz20kV3TaQ0usTwv5KuLY8=
+github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
