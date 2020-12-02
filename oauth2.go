@@ -15,7 +15,6 @@ import (
 	"cloud.google.com/go/bigquery"
 	bigquerytools "github.com/leapforce-libraries/go_bigquerytools"
 	errortools "github.com/leapforce-libraries/go_errortools"
-	utilities "github.com/leapforce-libraries/go_utilities"
 	"google.golang.org/api/iterator"
 )
 
@@ -167,8 +166,10 @@ func (oa *OAuth2) GetToken(params *url.Values) *errortools.Error {
 	httpClient := http.Client{}
 
 	// Send out the HTTP request
-	res, e := utilities.DoWithRetry(&httpClient, request, oa.maxRetries, oa.secondsBetweenRetries)
-	if e != nil {
+	res, err := httpClient.Do(request)
+	e.SetResponse(res)
+	if err != nil {
+		e.SetMessage(err)
 		return e
 	}
 

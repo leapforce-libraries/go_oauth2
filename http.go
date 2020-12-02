@@ -10,6 +10,7 @@ import (
 	"reflect"
 
 	errortools "github.com/leapforce-libraries/go_errortools"
+	utilities "github.com/leapforce-libraries/go_utilities"
 	"github.com/pkg/errors"
 )
 
@@ -101,8 +102,12 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 	}
 
 	// Send out the HTTP request
-	response, err := client.Do(request)
-	e.SetResponse(response)
+	response, e := utilities.DoWithRetry(client, request, oa.maxRetries, oa.secondsBetweenRetries)
+	if e != nil {
+		return request, response, e
+	}
+	//response, err := client.Do(request)
+	//e.SetResponse(response)
 
 	oa.unlockToken()
 
