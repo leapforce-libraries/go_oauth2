@@ -105,20 +105,22 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 
 	oa.unlockToken()
 
-	// Check HTTP StatusCode
-	if response.StatusCode < 200 || response.StatusCode > 299 {
-		fmt.Println(fmt.Sprintf("ERROR in %s", httpMethod))
-		fmt.Println("url", url)
-		fmt.Println("StatusCode", response.StatusCode)
-		fmt.Println(accessToken)
+	if response != nil {
+		// Check HTTP StatusCode
+		if response.StatusCode < 200 || response.StatusCode > 299 {
+			fmt.Println(fmt.Sprintf("ERROR in %s", httpMethod))
+			fmt.Println("url", url)
+			fmt.Println("StatusCode", response.StatusCode)
+			fmt.Println(accessToken)
 
-		if e == nil {
-			e = new(errortools.Error)
-			e.SetRequest(request)
-			e.SetResponse(response)
+			if e == nil {
+				e = new(errortools.Error)
+				e.SetRequest(request)
+				e.SetResponse(response)
+			}
+
+			e.SetMessage(fmt.Sprintf("Server returned statuscode %v", response.StatusCode))
 		}
-
-		e.SetMessage(fmt.Sprintf("Server returned statuscode %v", response.StatusCode))
 	}
 	if e != nil {
 		err2 := unmarshalError(response, modelError)
