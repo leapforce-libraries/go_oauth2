@@ -18,9 +18,7 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-const (
-	tableRefreshToken string = "leapforce.oauth2"
-)
+const tableRefreshToken string = "leapforce.oauth2"
 
 // OAuth2 stores OAuth2 configuration
 //
@@ -37,7 +35,6 @@ type OAuth2 struct {
 	tokenFunction         *func() (*Token, *errortools.Error)
 	token                 *Token
 	bigQuery              *bigquerytools.BigQuery
-	isLive                bool
 	locationUTC           *time.Location
 	maxRetries            uint
 	secondsBetweenRetries uint32
@@ -62,7 +59,7 @@ type ApiError struct {
 	Description string `json:"error_description,omitempty"`
 }
 
-func NewOAuth(config OAuth2Config, bigquery *bigquerytools.BigQuery, isLive bool) *OAuth2 {
+func NewOAuth(config OAuth2Config, bigquery *bigquerytools.BigQuery) *OAuth2 {
 	oa := new(OAuth2)
 	oa.apiName = config.ApiName
 	oa.clientID = config.ClientID
@@ -74,7 +71,6 @@ func NewOAuth(config OAuth2Config, bigquery *bigquerytools.BigQuery, isLive bool
 	oa.tokenHTTPMethod = config.TokenHTTPMethod
 	oa.tokenFunction = config.TokenFunction
 	oa.bigQuery = bigquery
-	oa.isLive = isLive
 	locUTC, _ := time.LoadLocation("UTC")
 	oa.locationUTC = locUTC
 

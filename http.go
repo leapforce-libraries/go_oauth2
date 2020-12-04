@@ -65,6 +65,7 @@ func (oa *OAuth2) getHTTPClient() (*http.Client, *errortools.Error) {
 }
 
 func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, model interface{}, modelError interface{}) (*http.Request, *http.Response, *errortools.Error) {
+	fmt.Println("httpRequest", reflect.TypeOf(modelError).Kind())
 	client, e := oa.getHTTPClient()
 	if e != nil {
 		return nil, nil, e
@@ -126,7 +127,7 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 	fmt.Println(123)
 	if e != nil {
 		err2 := unmarshalError(response, modelError)
-		errortools.CaptureInfo(err2, oa.isLive)
+		errortools.CaptureInfo(err2)
 
 		return request, response, e
 	}
@@ -153,6 +154,7 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 }
 
 func unmarshalError(response *http.Response, modelError interface{}) *errortools.Error {
+	fmt.Println("unmarshalError", reflect.TypeOf(modelError).Kind())
 	if response == nil {
 		return nil
 	}
