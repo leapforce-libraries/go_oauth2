@@ -75,7 +75,8 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 	request, err := http.NewRequest(httpMethod, url, body)
 	e.SetRequest(request)
 	if err != nil {
-		return request, nil, errortools.ErrorMessage(err)
+		e.SetMessage(err)
+		return request, nil, e
 	}
 
 	oa.lockToken()
@@ -124,7 +125,7 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 	}
 	if e != nil {
 		err2 := unmarshalError(response, modelError)
-		errortools.CaptureError(err2, oa.isLive)
+		errortools.CaptureInfo(err2, oa.isLive)
 
 		return request, response, e
 	}
