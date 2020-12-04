@@ -123,9 +123,12 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 			e.SetMessage(fmt.Sprintf("Server returned statuscode %v", response.StatusCode))
 		}
 	}
+	fmt.Println(123)
 	if e != nil {
 		err2 := unmarshalError(response, modelError)
 		errortools.CaptureInfo(err2, oa.isLive)
+
+		fmt.Println(modelError)
 
 		return request, response, e
 	}
