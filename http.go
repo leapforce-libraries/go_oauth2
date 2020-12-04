@@ -128,8 +128,6 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 		err2 := unmarshalError(response, modelError)
 		errortools.CaptureInfo(err2, oa.isLive)
 
-		fmt.Println(modelError)
-
 		return request, response, e
 	}
 
@@ -148,6 +146,8 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 			return request, response, e
 		}
 	}
+
+	fmt.Println(modelError)
 
 	return request, response, nil
 }
@@ -170,7 +170,7 @@ func unmarshalError(response *http.Response, modelError interface{}) *errortools
 		return errortools.ErrorMessage(err)
 	}
 
-	err = json.Unmarshal(b, modelError)
+	err = json.Unmarshal(b, &modelError)
 	if err != nil {
 		return errortools.ErrorMessage(err)
 	}
