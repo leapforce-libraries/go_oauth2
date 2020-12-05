@@ -41,7 +41,7 @@ type OAuth2 struct {
 }
 
 type OAuth2Config struct {
-	ApiName               string
+	APIName               string
 	ClientID              string
 	ClientSecret          string
 	Scope                 string
@@ -61,7 +61,7 @@ type ApiError struct {
 
 func NewOAuth(config OAuth2Config, bigquery *bigquerytools.BigQuery) *OAuth2 {
 	oa := new(OAuth2)
-	oa.apiName = config.ApiName
+	oa.apiName = config.APIName
 	oa.clientID = config.ClientID
 	oa.clientSecret = config.ClientSecret
 	oa.scope = config.Scope
