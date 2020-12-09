@@ -277,9 +277,9 @@ func (oa *OAuth2) ValidateToken() (*Token, *errortools.Error) {
 
 	if !oa.token.hasAccessToken() {
 		// retrieve AccessCode from BigQuery
-		err := oa.getTokenFromBigQuery()
-		if err != nil {
-			return nil, errortools.ErrorMessage(err)
+		e := oa.getTokenFromBigQuery()
+		if e != nil {
+			return nil, e
 		}
 	}
 
@@ -291,9 +291,9 @@ func (oa *OAuth2) ValidateToken() (*Token, *errortools.Error) {
 	}
 
 	if oa.token.hasRefreshToken() {
-		err := oa.getTokenFromRefreshToken()
-		if err != nil {
-			return nil, errortools.ErrorMessage(err)
+		e := oa.getTokenFromRefreshToken()
+		if e != nil {
+			return nil, e
 		}
 
 		if oa.token.hasValidAccessToken(atTimeUTC) {
@@ -388,8 +388,7 @@ func (oa *OAuth2) getTokenFromBigQuery() *errortools.Error {
 	// create client
 	bqClient, e := oa.bigQuery.CreateClient()
 	if e != nil {
-		fmt.Println("\nerror in BigQueryCreateClient")
-		return errortools.ErrorMessage(e)
+		return e
 	}
 
 	ctx := context.Background()
