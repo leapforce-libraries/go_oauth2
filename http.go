@@ -125,8 +125,10 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, body io.Reader, mod
 	}
 
 	if e != nil {
-		err2 := unmarshalError(response, modelError)
-		errortools.CaptureInfo(err2)
+		if modelError != nil {
+			err2 := unmarshalError(response, modelError)
+			errortools.CaptureInfo(err2)
+		}
 
 		return request, response, e
 	}
