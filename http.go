@@ -59,7 +59,7 @@ func (oa *OAuth2) getHTTPClient() (*http.Client, *errortools.Error) {
 }
 
 func (oa *OAuth2) httpRequest(httpMethod string, url string, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	if bodyModel == nil {
+	if utilities.IsNil(bodyModel) {
 		return oa.httpRequestWithBuffer(httpMethod, url, nil, responseModel, errorModel)
 	}
 
