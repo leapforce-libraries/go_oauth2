@@ -14,13 +14,11 @@ import (
 	errortools "github.com/leapforce-libraries/go_errortools"
 )
 
-const tableRefreshToken string = "leapforce.oauth2"
-
 // OAuth2 stores OAuth2 configuration
 //
 type OAuth2 struct {
 	// config
-	apiName               string
+	//apiName               string
 	clientID              string
 	clientSecret          string
 	scope                 string
@@ -38,7 +36,7 @@ type OAuth2 struct {
 }
 
 type OAuth2Config struct {
-	APIName               string
+	//APIName               string
 	ClientID              string
 	ClientSecret          string
 	Scope                 string
@@ -60,7 +58,7 @@ type ApiError struct {
 
 func NewOAuth(config OAuth2Config) *OAuth2 {
 	oa := new(OAuth2)
-	oa.apiName = config.APIName
+	//oa.apiName = config.APIName
 	oa.clientID = config.ClientID
 	oa.clientSecret = config.ClientSecret
 	oa.scope = config.Scope
@@ -93,7 +91,7 @@ func (oa *OAuth2) lockToken() {
 	tokenMutex.Lock()
 }
 
-func (oa *OAuth2) GetToken(params *url.Values) *errortools.Error {
+func (oa *OAuth2) getToken(params *url.Values) *errortools.Error {
 	request := new(http.Request)
 
 	fmt.Println(oa.tokenHTTPMethod)
@@ -251,7 +249,7 @@ func (oa *OAuth2) getTokenFromCode(code string) *errortools.Error {
 	data.Set("grant_type", "authorization_code")
 	data.Set("redirect_uri", oa.redirectURL)
 
-	return oa.GetToken(&data)
+	return oa.getToken(&data)
 }
 
 func (oa *OAuth2) getTokenFromRefreshToken() *errortools.Error {
@@ -278,7 +276,7 @@ func (oa *OAuth2) getTokenFromRefreshToken() *errortools.Error {
 	data.Set("refresh_token", *((*oa.token).RefreshToken))
 	data.Set("grant_type", "refresh_token")
 
-	return oa.GetToken(&data)
+	return oa.getToken(&data)
 }
 
 // ValidateToken validates current token and retrieves a new one if necessary
@@ -323,7 +321,7 @@ func (oa *OAuth2) ValidateToken() (*Token, *errortools.Error) {
 	}
 
 	if oa.newTokenFunction != nil {
-		e := oa.getTokenFromFunction()
+		e := oa.getNewTokenFromFunction()
 		if e != nil {
 			return nil, e
 		} else {
@@ -335,16 +333,15 @@ func (oa *OAuth2) ValidateToken() (*Token, *errortools.Error) {
 }
 
 func (oa *OAuth2) initTokenNeeded() *errortools.Error {
-	message := fmt.Sprintf("No valid accesscode or refreshcode found. Please generate new token by running command:\noauth2_token.exe %s %s", oa.apiName, oa.clientID)
+	message := fmt.Sprintf("No valid accesscode or refreshcode found. Please generate new token by running command:\noauth2_token.exe %s", oa.clientID)
 	fmt.Println(message)
 
 	return errortools.ErrorMessage(message)
 }
 
 func (oa *OAuth2) InitToken() *errortools.Error {
-
 	if oa == nil {
-		return errortools.ErrorMessage(fmt.Sprintf("%s variable not initialized", oa.apiName))
+		return errortools.ErrorMessage("OAuth2 variable is nil pointer")
 	}
 
 	url2 := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", oa.authURL, oa.clientID, url.PathEscape(oa.redirectURL), url.PathEscape(oa.scope))
@@ -379,8 +376,8 @@ func (oa *OAuth2) InitToken() *errortools.Error {
 	return nil
 }
 
-func (oa *OAuth2) getTokenFromFunction() *errortools.Error {
-	fmt.Println("***getTokenFromFunction***")
+func (oa *OAuth2) getNewTokenFromFunction() *errortools.Error {
+	fmt.Println("***getNewTokenFromFunction***")
 
 	if oa.newTokenFunction == nil {
 		return errortools.ErrorMessage("No NewTokenFunction defined.")
