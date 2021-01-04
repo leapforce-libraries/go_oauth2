@@ -43,6 +43,12 @@ func (oa *OAuth2) Delete(url string, bodyModel interface{}, responseModel interf
 	return oa.httpRequest(http.MethodDelete, url, bodyModel, responseModel, errorModel)
 }
 
+// HTTP returns http.Response for generic oAuth2 http call
+//
+func (oa *OAuth2) HTTP(httpMethod string, url string, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(httpMethod, url, bodyModel, responseModel, errorModel)
+}
+
 func (oa *OAuth2) getHTTPClient() (*http.Client, *errortools.Error) {
 	_, e := oa.ValidateToken()
 	if e != nil {
