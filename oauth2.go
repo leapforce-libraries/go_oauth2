@@ -87,6 +87,10 @@ func NewOAuth(config OAuth2Config) *OAuth2 {
 	return oa
 }
 
+func (oa *OAuth2) LocationUTC() *time.Location {
+	return oa.locationUTC
+}
+
 func (oa *OAuth2) lockToken() {
 	tokenMutex.Lock()
 }
