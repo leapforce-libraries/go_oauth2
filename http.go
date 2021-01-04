@@ -72,10 +72,13 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, bodyModel interface
 }
 
 func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, url string, body io.Reader, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
+
 	client, e := oa.getHTTPClient()
 	if e != nil {
 		return nil, nil, e
 	}
+
+	e = new(errortools.Error)
 
 	request, err := http.NewRequest(httpMethod, url, body)
 	e.SetRequest(request)
