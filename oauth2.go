@@ -1,7 +1,6 @@
 package oauth2
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,10 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"cloud.google.com/go/bigquery"
-	bigquerytools "github.com/leapforce-libraries/go_bigquerytools"
 	errortools "github.com/leapforce-libraries/go_errortools"
-	"google.golang.org/api/iterator"
 )
 
 const tableRefreshToken string = "leapforce.oauth2"
@@ -32,9 +28,10 @@ type OAuth2 struct {
 	authURL               string
 	tokenURL              string
 	tokenHTTPMethod       string
-	tokenFunction         *func() (*Token, *errortools.Error)
+	getTokenFunction      *func() (*Token, *errortools.Error)
+	newTokenFunction      *func() (*Token, *errortools.Error)
+	saveTokenFunction     *func(token *Token) *errortools.Error
 	token                 *Token
-	bigQuery              *bigquerytools.BigQuery
 	locationUTC           *time.Location
 	maxRetries            uint
 	secondsBetweenRetries uint32
@@ -49,7 +46,9 @@ type OAuth2Config struct {
 	AuthURL               string
 	TokenURL              string
 	TokenHTTPMethod       string
-	TokenFunction         *func() (*Token, *errortools.Error)
+	GetTokenFunction      *func() (*Token, *errortools.Error)
+	NewTokenFunction      *func() (*Token, *errortools.Error)
+	SaveTokenFunction     *func(token *Token) *errortools.Error
 	MaxRetries            *uint
 	SecondsBetweenRetries *uint32
 }
@@ -59,7 +58,7 @@ type ApiError struct {
 	Description string `json:"error_description,omitempty"`
 }
 
-func NewOAuth(config OAuth2Config, bigquery *bigquerytools.BigQuery) *OAuth2 {
+func NewOAuth(config OAuth2Config) *OAuth2 {
 	oa := new(OAuth2)
 	oa.apiName = config.APIName
 	oa.clientID = config.ClientID
@@ -69,8 +68,9 @@ func NewOAuth(config OAuth2Config, bigquery *bigquerytools.BigQuery) *OAuth2 {
 	oa.authURL = config.AuthURL
 	oa.tokenURL = config.TokenURL
 	oa.tokenHTTPMethod = config.TokenHTTPMethod
-	oa.tokenFunction = config.TokenFunction
-	oa.bigQuery = bigquery
+	oa.getTokenFunction = config.GetTokenFunction
+	oa.newTokenFunction = config.NewTokenFunction
+	oa.saveTokenFunction = config.SaveTokenFunction
 	locUTC, _ := time.LoadLocation("UTC")
 	oa.locationUTC = locUTC
 
@@ -173,10 +173,6 @@ func (oa *OAuth2) GetToken(params *url.Values) *errortools.Error {
 		oa.token.Print()
 
 		if res.StatusCode == 401 {
-			/*if oa.isLive {
-				message := fmt.Sprintln("Error:", res.StatusCode, eoError.Error, ", ", eoError.Description)
-				sentry.CaptureMessage(fmt.Sprintf("%s refreshtoken not valid, login needed to retrieve a new one. Error: %s", oa.apiName, message))
-			}*/
 			return oa.initTokenNeeded()
 		}
 
@@ -192,15 +188,23 @@ func (oa *OAuth2) GetToken(params *url.Values) *errortools.Error {
 		return e
 	}
 
-	ee := oa.setToken(&token)
-	if ee != nil {
-		return ee
+	e = oa.setToken(&token)
+	if e != nil {
+		return e
 	}
 
-	ee = oa.saveTokenToBigQuery()
-	if ee != nil {
-		return ee
+	if oa.saveTokenFunction != nil {
+		e = (*oa.saveTokenFunction)(&token)
+		if e != nil {
+			return e
+		}
 	}
+
+	/*
+		ee = oa.saveTokenToBigQuery()
+		if ee != nil {
+			return ee
+		}*/
 
 	return nil
 }
@@ -254,7 +258,15 @@ func (oa *OAuth2) getTokenFromRefreshToken() *errortools.Error {
 	fmt.Println("***getTokenFromRefreshToken***")
 
 	//always get refresh token from BQ prior to using it
-	oa.getTokenFromBigQuery()
+	if oa.getTokenFunction != nil {
+		// retrieve AccessCode from BigQuery
+		token, e := (*oa.getTokenFunction)()
+		if e != nil {
+			return e
+		}
+
+		oa.token = token
+	}
 
 	if !oa.token.hasRefreshToken() {
 		return oa.initTokenNeeded()
@@ -276,11 +288,20 @@ func (oa *OAuth2) ValidateToken() (*Token, *errortools.Error) {
 	defer oa.unlockToken()
 
 	if !oa.token.hasAccessToken() {
-		// retrieve AccessCode from BigQuery
-		e := oa.getTokenFromBigQuery()
+		if oa.getTokenFunction != nil {
+			// retrieve AccessCode from BigQuery
+			token, e := (*oa.getTokenFunction)()
+			if e != nil {
+				return nil, e
+			}
+
+			oa.token = token
+		}
+
+		/*e := oa.getTokenFromBigQuery()
 		if e != nil {
 			return nil, e
-		}
+		}*/
 	}
 
 	// token should be valid at least one minute from now (te be sure)
@@ -301,7 +322,7 @@ func (oa *OAuth2) ValidateToken() (*Token, *errortools.Error) {
 		}
 	}
 
-	if oa.tokenFunction != nil {
+	if oa.newTokenFunction != nil {
 		e := oa.getTokenFromFunction()
 		if e != nil {
 			return nil, e
@@ -361,176 +382,31 @@ func (oa *OAuth2) InitToken() *errortools.Error {
 func (oa *OAuth2) getTokenFromFunction() *errortools.Error {
 	fmt.Println("***getTokenFromFunction***")
 
-	if oa.tokenFunction == nil {
-		return errortools.ErrorMessage("No TokenFunction defined.")
+	if oa.newTokenFunction == nil {
+		return errortools.ErrorMessage("No NewTokenFunction defined.")
 	}
 
-	token, e := (*oa.tokenFunction)()
+	token, e := (*oa.newTokenFunction)()
 	if e != nil {
 		return e
 	}
 
-	ee := oa.setToken(token)
-	if ee != nil {
-		return ee
-	}
-
-	ee = oa.saveTokenToBigQuery()
-	if ee != nil {
-		return ee
-	}
-
-	return nil
-}
-
-func (oa *OAuth2) getTokenFromBigQuery() *errortools.Error {
-	fmt.Println("***getTokenFromBigQuery***")
-	// create client
-	bqClient, e := oa.bigQuery.CreateClient()
+	e = oa.setToken(token)
 	if e != nil {
 		return e
 	}
 
-	ctx := context.Background()
-
-	sql := fmt.Sprintf("SELECT TokenType, AccessToken, RefreshToken, Expiry, Scope FROM `%s` WHERE Api = '%s' AND ClientID = '%s'", tableRefreshToken, oa.apiName, oa.clientID)
-	//fmt.Println(sql)
-
-	q := bqClient.Query(sql)
-	it, err := q.Read(ctx)
-	if err != nil {
-		return errortools.ErrorMessage(err)
-	}
-
-	type TokenBQ struct {
-		AccessToken  bigquery.NullString
-		Scope        bigquery.NullString
-		TokenType    bigquery.NullString
-		RefreshToken bigquery.NullString
-		Expiry       bigquery.NullTimestamp
-	}
-
-	tokenBQ := new(TokenBQ)
-
-	for {
-		err := it.Next(tokenBQ)
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return errortools.ErrorMessage(err)
-		}
-
-		break
-	}
-
-	expiry := bigquerytools.NullTimestampToTime(tokenBQ.Expiry)
-
-	if expiry != nil {
-		//convert to UTC
-		expiryUTC := (*expiry).In(oa.locationUTC)
-		expiry = &expiryUTC
-	}
-
-	oa.token = &Token{
-		bigquerytools.NullStringToString(tokenBQ.AccessToken),
-		bigquerytools.NullStringToString(tokenBQ.Scope),
-		bigquerytools.NullStringToString(tokenBQ.TokenType),
-		nil,
-		bigquerytools.NullStringToString(tokenBQ.RefreshToken),
-		expiry,
-	}
-
-	oa.token.Print()
-
-	return nil
-}
-
-func (oa *OAuth2) saveTokenToBigQuery() *errortools.Error {
-	// create client
-	bqClient, e := oa.bigQuery.CreateClient()
-	if e != nil {
-		return e
-	}
-
-	ctx := context.Background()
-
-	sqlUpdate := "SET AccessToken = SOURCE.AccessToken, Expiry = SOURCE.Expiry"
-
-	tokenType := "NULLIF('','')"
-	if oa.token.TokenType != nil {
-		if *oa.token.TokenType != "" {
-			tokenType = fmt.Sprintf("'%s'", *oa.token.TokenType)
-			sqlUpdate = fmt.Sprintf("%s, TokenType = SOURCE.TokenType", sqlUpdate)
+	if oa.saveTokenFunction != nil {
+		e = (*oa.saveTokenFunction)(token)
+		if e != nil {
+			return e
 		}
 	}
-
-	accessToken := "NULLIF('','')"
-	if oa.token.AccessToken != nil {
-		if *oa.token.AccessToken != "" {
-			accessToken = fmt.Sprintf("'%s'", *oa.token.AccessToken)
-		}
-	}
-
-	refreshToken := "NULLIF('','')"
-	if oa.token.RefreshToken != nil {
-		if *oa.token.RefreshToken != "" {
-			refreshToken = fmt.Sprintf("'%s'", *oa.token.RefreshToken)
-			sqlUpdate = fmt.Sprintf("%s, RefreshToken = SOURCE.RefreshToken", sqlUpdate)
-		}
-	}
-
-	expiry := "TIMESTAMP(NULL)"
-	if oa.token.Expiry != nil {
-		expiry = fmt.Sprintf("TIMESTAMP('%s')", (*oa.token.Expiry).Format("2006-01-02T15:04:05"))
-	}
-
-	scope := "NULLIF('','')"
-	if oa.token.Scope != nil {
-		if *oa.token.Scope != "" {
-			scope = fmt.Sprintf("'%s'", *oa.token.Scope)
-			sqlUpdate = fmt.Sprintf("%s, Scope = SOURCE.Scope", sqlUpdate)
-		}
-	}
-
-	sql := "MERGE `" + tableRefreshToken + "` AS TARGET " +
-		"USING  (SELECT '" +
-		oa.apiName + "' AS Api,'" +
-		oa.clientID + "' AS ClientID," +
-		tokenType + " AS TokenType," +
-		accessToken + " AS AccessToken," +
-		refreshToken + " AS RefreshToken," +
-		expiry + " AS Expiry," +
-		scope + " AS Scope) AS SOURCE " +
-		" ON TARGET.Api = SOURCE.Api " +
-		" AND TARGET.ClientID = SOURCE.ClientID " +
-		"WHEN MATCHED THEN " +
-		"	UPDATE " + sqlUpdate +
-		" WHEN NOT MATCHED BY TARGET THEN " +
-		"	INSERT (Api, ClientID, TokenType, AccessToken, RefreshToken, Expiry, Scope) " +
-		"	VALUES (SOURCE.Api, SOURCE.ClientID, SOURCE.TokenType, SOURCE.AccessToken, SOURCE.RefreshToken, SOURCE.Expiry, SOURCE.Scope)"
-
-	q := bqClient.Query(sql)
-	//fmt.Println(sql)
-
-	job, err := q.Run(ctx)
-	if err != nil {
-		return errortools.ErrorMessage(err)
-	}
-
-	for {
-		status, err := job.Status(ctx)
-		if err != nil {
-			return errortools.ErrorMessage(err)
-		}
-		if status.Done() {
-			if status.Err() != nil {
-				return errortools.ErrorMessage(status.Err())
-			}
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
+	/*
+		ee = oa.saveTokenToBigQuery()
+		if ee != nil {
+			return ee
+		}*/
 
 	return nil
 }
