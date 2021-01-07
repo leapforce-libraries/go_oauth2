@@ -29,6 +29,7 @@ type OAuth2 struct {
 	getTokenFunction      *func() (*Token, *errortools.Error)
 	newTokenFunction      *func() (*Token, *errortools.Error)
 	saveTokenFunction     *func(token *Token) *errortools.Error
+	nonDefaultHeaders     *http.Header
 	token                 *Token
 	locationUTC           *time.Location
 	maxRetries            uint
@@ -47,6 +48,7 @@ type OAuth2Config struct {
 	GetTokenFunction      *func() (*Token, *errortools.Error)
 	NewTokenFunction      *func() (*Token, *errortools.Error)
 	SaveTokenFunction     *func(token *Token) *errortools.Error
+	NonDefaultHeaders     *http.Header
 	MaxRetries            *uint
 	SecondsBetweenRetries *uint32
 }
@@ -57,34 +59,34 @@ type ApiError struct {
 }
 
 func NewOAuth(config OAuth2Config) *OAuth2 {
-	oa := new(OAuth2)
-	//oa.apiName = config.APIName
-	oa.clientID = config.ClientID
-	oa.clientSecret = config.ClientSecret
-	oa.scope = config.Scope
-	oa.redirectURL = config.RedirectURL
-	oa.authURL = config.AuthURL
-	oa.tokenURL = config.TokenURL
-	oa.tokenHTTPMethod = config.TokenHTTPMethod
-	oa.getTokenFunction = config.GetTokenFunction
-	oa.newTokenFunction = config.NewTokenFunction
-	oa.saveTokenFunction = config.SaveTokenFunction
 	locUTC, _ := time.LoadLocation("UTC")
-	oa.locationUTC = locUTC
+	maxRetries := uint(0)
+	secondsBetweenRetries := uint32(3)
 
 	if config.MaxRetries != nil {
-		oa.maxRetries = *config.MaxRetries
-	} else {
-		oa.maxRetries = 0
+		maxRetries = *config.MaxRetries
 	}
 
 	if config.SecondsBetweenRetries != nil {
-		oa.secondsBetweenRetries = *config.SecondsBetweenRetries
-	} else {
-		oa.secondsBetweenRetries = 3
+		secondsBetweenRetries = *config.SecondsBetweenRetries
 	}
 
-	return oa
+	return &OAuth2{
+		clientID:              config.ClientID,
+		clientSecret:          config.ClientSecret,
+		scope:                 config.Scope,
+		redirectURL:           config.RedirectURL,
+		authURL:               config.AuthURL,
+		tokenURL:              config.TokenURL,
+		tokenHTTPMethod:       config.TokenHTTPMethod,
+		getTokenFunction:      config.GetTokenFunction,
+		newTokenFunction:      config.NewTokenFunction,
+		saveTokenFunction:     config.SaveTokenFunction,
+		nonDefaultHeaders:     config.NonDefaultHeaders,
+		locationUTC:           locUTC,
+		maxRetries:            maxRetries,
+		secondsBetweenRetries: secondsBetweenRetries,
+	}
 }
 
 func (oa *OAuth2) lockToken() {

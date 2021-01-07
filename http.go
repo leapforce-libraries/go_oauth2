@@ -15,38 +15,38 @@ import (
 
 // Get returns http.Response for generic oAuth2 Get http call
 //
-func (oa *OAuth2) Get(url string, headers *http.Header, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodGet, url, headers, nil, responseModel, errorModel)
+func (oa *OAuth2) Get(url string, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodGet, url, nil, responseModel, errorModel)
 }
 
 // Post returns http.Response for generic oAuth2 Post http call
 //
-func (oa *OAuth2) Post(url string, headers *http.Header, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodPost, url, headers, bodyModel, responseModel, errorModel)
+func (oa *OAuth2) Post(url string, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodPost, url, bodyModel, responseModel, errorModel)
 }
 
 // Put returns http.Response for generic oAuth2 Put http call
 //
-func (oa *OAuth2) Put(url string, headers *http.Header, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodPut, url, headers, bodyModel, responseModel, errorModel)
+func (oa *OAuth2) Put(url string, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodPut, url, bodyModel, responseModel, errorModel)
 }
 
 // Patch returns http.Response for generic oAuth2 Patch http call
 //
-func (oa *OAuth2) Patch(url string, headers *http.Header, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodPatch, url, headers, bodyModel, responseModel, errorModel)
+func (oa *OAuth2) Patch(url string, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodPatch, url, bodyModel, responseModel, errorModel)
 }
 
 // Delete returns http.Response for generic oAuth2 Delete http call
 //
-func (oa *OAuth2) Delete(url string, headers *http.Header, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodDelete, url, headers, bodyModel, responseModel, errorModel)
+func (oa *OAuth2) Delete(url string, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodDelete, url, bodyModel, responseModel, errorModel)
 }
 
 // HTTP returns http.Response for generic oAuth2 http call
 //
-func (oa *OAuth2) HTTP(httpMethod string, url string, headers *http.Header, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(httpMethod, url, headers, bodyModel, responseModel, errorModel)
+func (oa *OAuth2) HTTP(httpMethod string, url string, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(httpMethod, url, bodyModel, responseModel, errorModel)
 }
 
 func (oa *OAuth2) getHTTPClient() (*http.Client, *errortools.Error) {
@@ -58,9 +58,9 @@ func (oa *OAuth2) getHTTPClient() (*http.Client, *errortools.Error) {
 	return new(http.Client), nil
 }
 
-func (oa *OAuth2) httpRequest(httpMethod string, url string, headers *http.Header, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
+func (oa *OAuth2) httpRequest(httpMethod string, url string, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
 	if utilities.IsNil(bodyModel) {
-		return oa.httpRequestWithBuffer(httpMethod, url, headers, nil, responseModel, errorModel)
+		return oa.httpRequestWithBuffer(httpMethod, url, nil, responseModel, errorModel)
 	}
 
 	b, err := json.Marshal(bodyModel)
@@ -68,10 +68,10 @@ func (oa *OAuth2) httpRequest(httpMethod string, url string, headers *http.Heade
 		return nil, nil, errortools.ErrorMessage(err)
 	}
 
-	return oa.httpRequestWithBuffer(httpMethod, url, headers, bytes.NewBuffer(b), responseModel, errorModel)
+	return oa.httpRequestWithBuffer(httpMethod, url, bytes.NewBuffer(b), responseModel, errorModel)
 }
 
-func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, url string, headers *http.Header, body io.Reader, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
+func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, url string, body io.Reader, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
 	client, e := oa.getHTTPClient()
 	if e != nil {
 		return nil, nil, e
@@ -109,8 +109,8 @@ func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, url string, headers *
 	}
 
 	// overrule with input headers
-	if headers != nil {
-		for key, values := range *headers {
+	if oa.nonDefaultHeaders != nil {
+		for key, values := range *oa.nonDefaultHeaders {
 			request.Header.Del(key) //delete old header
 			for _, value := range values {
 				request.Header.Add(key, value) //add new header(s)
