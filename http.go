@@ -13,40 +13,48 @@ import (
 	utilities "github.com/leapforce-libraries/go_utilities"
 )
 
+type RequestConfig struct {
+	URL             string
+	BodyModel       *interface{}
+	ResponseModel   *interface{}
+	ErrorModel      *interface{}
+	SkipAccessToken *bool
+}
+
 // Get returns http.Response for generic oAuth2 Get http call
 //
-func (oa *OAuth2) Get(url string, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodGet, url, nil, responseModel, errorModel)
+func (oa *OAuth2) Get(config *RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodGet, config)
 }
 
 // Post returns http.Response for generic oAuth2 Post http call
 //
-func (oa *OAuth2) Post(url string, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodPost, url, bodyModel, responseModel, errorModel)
+func (oa *OAuth2) Post(config *RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodPost, config)
 }
 
 // Put returns http.Response for generic oAuth2 Put http call
 //
-func (oa *OAuth2) Put(url string, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodPut, url, bodyModel, responseModel, errorModel)
+func (oa *OAuth2) Put(config *RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodPut, config)
 }
 
 // Patch returns http.Response for generic oAuth2 Patch http call
 //
-func (oa *OAuth2) Patch(url string, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodPatch, url, bodyModel, responseModel, errorModel)
+func (oa *OAuth2) Patch(config *RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodPatch, config)
 }
 
 // Delete returns http.Response for generic oAuth2 Delete http call
 //
-func (oa *OAuth2) Delete(url string, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodDelete, url, bodyModel, responseModel, errorModel)
+func (oa *OAuth2) Delete(config *RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodDelete, config)
 }
 
 // HTTP returns http.Response for generic oAuth2 http call
 //
-func (oa *OAuth2) HTTP(httpMethod string, url string, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(httpMethod, url, bodyModel, responseModel, errorModel)
+func (oa *OAuth2) HTTP(httpMethod string, config *RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(httpMethod, config)
 }
 
 func (oa *OAuth2) getHTTPClient() (*http.Client, *errortools.Error) {
@@ -58,20 +66,24 @@ func (oa *OAuth2) getHTTPClient() (*http.Client, *errortools.Error) {
 	return new(http.Client), nil
 }
 
-func (oa *OAuth2) httpRequest(httpMethod string, url string, bodyModel interface{}, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
-	if utilities.IsNil(bodyModel) {
-		return oa.httpRequestWithBuffer(httpMethod, url, nil, responseModel, errorModel)
+func (oa *OAuth2) httpRequest(httpMethod string, config *RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	if config == nil {
+		return nil, nil, errortools.ErrorMessage("Request config may not be a nil pointer.")
 	}
 
-	b, err := json.Marshal(bodyModel)
+	if utilities.IsNil(config.BodyModel) {
+		return oa.httpRequestWithBuffer(httpMethod, config, nil)
+	}
+
+	b, err := json.Marshal(config.BodyModel)
 	if err != nil {
 		return nil, nil, errortools.ErrorMessage(err)
 	}
 
-	return oa.httpRequestWithBuffer(httpMethod, url, bytes.NewBuffer(b), responseModel, errorModel)
+	return oa.httpRequestWithBuffer(httpMethod, config, bytes.NewBuffer(b))
 }
 
-func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, url string, body io.Reader, responseModel interface{}, errorModel interface{}) (*http.Request, *http.Response, *errortools.Error) {
+func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, config *RequestConfig, body io.Reader) (*http.Request, *http.Response, *errortools.Error) {
 	client, e := oa.getHTTPClient()
 	if e != nil {
 		return nil, nil, e
@@ -79,33 +91,39 @@ func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, url string, body io.R
 
 	e = new(errortools.Error)
 
-	request, err := http.NewRequest(httpMethod, url, body)
+	request, err := http.NewRequest(httpMethod, config.URL, body)
 	e.SetRequest(request)
 	if err != nil {
 		e.SetMessage(err)
 		return request, nil, e
 	}
 
-	oa.lockToken()
-
-	if oa.token == nil {
-		e.SetMessage("No Token.")
-		return request, nil, e
-	}
-
-	if (*oa.token).AccessToken == nil {
-		e.SetMessage("No AccessToken.")
-		return request, nil, e
-	}
-
-	accessToken := *((*oa.token).AccessToken)
-
 	// default headers
-	bearer := fmt.Sprintf("Bearer %s", accessToken)
-	request.Header.Set("Authorization", bearer)
 	request.Header.Set("Accept", "application/json")
 	if body != nil {
 		request.Header.Set("Content-Type", "application/json")
+	}
+
+	// Authorization header
+	accessToken := ""
+	if config.SkipAccessToken != nil {
+		if *config.SkipAccessToken == false {
+			oa.lockToken()
+
+			if oa.token == nil {
+				e.SetMessage("No Token.")
+				return request, nil, e
+			}
+
+			if (*oa.token).AccessToken == nil {
+				e.SetMessage("No AccessToken.")
+				return request, nil, e
+			}
+
+			accessToken = *((*oa.token).AccessToken)
+			bearer := fmt.Sprintf("Bearer %s", accessToken)
+			request.Header.Set("Authorization", bearer)
+		}
 	}
 
 	// overrule with input headers
@@ -127,7 +145,7 @@ func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, url string, body io.R
 		// Check HTTP StatusCode
 		if response.StatusCode < 200 || response.StatusCode > 299 {
 			fmt.Println(fmt.Sprintf("ERROR in %s", httpMethod))
-			fmt.Println("url", url)
+			fmt.Println("url", config.URL)
 			fmt.Println("StatusCode", response.StatusCode)
 			fmt.Println(accessToken)
 
@@ -146,15 +164,15 @@ func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, url string, body io.R
 	}
 
 	if e != nil {
-		if errorModel != nil {
-			err := oa.unmarshalError(response, errorModel)
+		if !utilities.IsNil(config.ErrorModel) {
+			err := oa.unmarshalError(response, config.ErrorModel)
 			errortools.CaptureInfo(err)
 		}
 
 		return request, response, e
 	}
 
-	if responseModel != nil {
+	if !utilities.IsNil(config.ResponseModel) {
 		defer response.Body.Close()
 
 		b, err := ioutil.ReadAll(response.Body)
@@ -163,7 +181,7 @@ func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, url string, body io.R
 			return request, response, e
 		}
 
-		err = json.Unmarshal(b, &responseModel)
+		err = json.Unmarshal(b, &config.ResponseModel)
 		if err != nil {
 			e.SetMessage(err)
 			return request, response, e
