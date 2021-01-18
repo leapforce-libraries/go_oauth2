@@ -57,15 +57,6 @@ func (oa *OAuth2) HTTP(httpMethod string, config *RequestConfig) (*http.Request,
 	return oa.httpRequest(httpMethod, config)
 }
 
-func (oa *OAuth2) getHTTPClient() (*http.Client, *errortools.Error) {
-	_, e := oa.ValidateToken()
-	if e != nil {
-		return nil, e
-	}
-
-	return new(http.Client), nil
-}
-
 func (oa *OAuth2) httpRequest(httpMethod string, config *RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
 	if config == nil {
 		return nil, nil, errortools.ErrorMessage("Request config may not be a nil pointer.")
@@ -84,12 +75,7 @@ func (oa *OAuth2) httpRequest(httpMethod string, config *RequestConfig) (*http.R
 }
 
 func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, config *RequestConfig, body io.Reader) (*http.Request, *http.Response, *errortools.Error) {
-	client, e := oa.getHTTPClient()
-	if e != nil {
-		return nil, nil, e
-	}
-
-	e = new(errortools.Error)
+	e := new(errortools.Error)
 
 	request, err := http.NewRequest(httpMethod, config.URL, body)
 	e.SetRequest(request)
@@ -108,6 +94,11 @@ func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, config *RequestConfig
 	accessToken := ""
 	if config.SkipAccessToken != nil {
 		if *config.SkipAccessToken == false {
+			_, e := oa.ValidateToken()
+			if e != nil {
+				return request, nil, e
+			}
+
 			oa.lockToken()
 
 			if oa.token == nil {
@@ -135,6 +126,8 @@ func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, config *RequestConfig
 			}
 		}
 	}
+
+	client := new(http.Client)
 
 	// Send out the HTTP request
 	response, e := utilities.DoWithRetry(client, request, oa.maxRetries, oa.secondsBetweenRetries)
