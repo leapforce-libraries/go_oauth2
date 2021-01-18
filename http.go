@@ -93,31 +93,34 @@ func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, config *RequestConfig
 	// Authorization header
 	accessToken := ""
 	if config.SkipAccessToken != nil {
-		if *config.SkipAccessToken == false {
-			oa.lockToken()
-
-			_, e := oa.ValidateToken()
-			if e != nil {
-				return request, nil, e
-			}
-
-			oa.unlockToken()
-
-			if oa.token == nil {
-				e.SetMessage("No Token.")
-				return request, nil, e
-			}
-
-			if (*oa.token).AccessToken == nil {
-				e.SetMessage("No AccessToken.")
-				return request, nil, e
-			}
-
-			accessToken = *((*oa.token).AccessToken)
-			bearer := fmt.Sprintf("Bearer %s", accessToken)
-			request.Header.Set("Authorization", bearer)
+		if *config.SkipAccessToken {
+			goto tokenSkipped
 		}
 	}
+
+	oa.lockToken()
+
+	_, e = oa.ValidateToken()
+	if e != nil {
+		return request, nil, e
+	}
+
+	oa.unlockToken()
+
+	if oa.token == nil {
+		e.SetMessage("No Token.")
+		return request, nil, e
+	}
+
+	if (*oa.token).AccessToken == nil {
+		e.SetMessage("No AccessToken.")
+		return request, nil, e
+	}
+
+	accessToken = *((*oa.token).AccessToken)
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+tokenSkipped:
 
 	// overrule with input headers
 	if oa.nonDefaultHeaders != nil {
