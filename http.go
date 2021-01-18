@@ -118,14 +118,10 @@ func (oa *OAuth2) httpRequestFromReader(httpMethod string, config *RequestConfig
 		}
 	}
 
-	oa.lockToken()
-
 	_, e = oa.ValidateToken()
 	if e != nil {
 		return request, nil, e
 	}
-
-	oa.unlockToken()
 
 	if oa.token == nil {
 		e.SetMessage("No Token.")
