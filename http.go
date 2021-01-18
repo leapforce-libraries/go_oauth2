@@ -70,7 +70,8 @@ func (oa *OAuth2) httpRequest(httpMethod string, config *RequestConfig) (*http.R
 
 	if config.XWWWFormURLEncoded != nil {
 		if *config.XWWWFormURLEncoded {
-			url, e := utilities.StructToURL(config.BodyModel)
+			tag := "json"
+			url, e := utilities.StructToURL(&config.BodyModel, &tag)
 			if e != nil {
 				return nil, nil, e
 			}
