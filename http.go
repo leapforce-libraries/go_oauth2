@@ -15,9 +15,9 @@ import (
 
 type RequestConfig struct {
 	URL             string
-	BodyModel       *interface{}
-	ResponseModel   *interface{}
-	ErrorModel      *interface{}
+	BodyModel       interface{}
+	ResponseModel   interface{}
+	ErrorModel      interface{}
 	SkipAccessToken *bool
 }
 
