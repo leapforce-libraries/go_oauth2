@@ -8,17 +8,19 @@ import (
 	"io/ioutil"
 	"net/http"
 	"reflect"
+	"strings"
 
 	errortools "github.com/leapforce-libraries/go_errortools"
 	utilities "github.com/leapforce-libraries/go_utilities"
 )
 
 type RequestConfig struct {
-	URL             string
-	BodyModel       interface{}
-	ResponseModel   interface{}
-	ErrorModel      interface{}
-	SkipAccessToken *bool
+	URL                string
+	BodyModel          interface{}
+	ResponseModel      interface{}
+	ErrorModel         interface{}
+	SkipAccessToken    *bool
+	XWWWFormURLEncoded *bool
 }
 
 // Get returns http.Response for generic oAuth2 Get http call
@@ -63,7 +65,18 @@ func (oa *OAuth2) httpRequest(httpMethod string, config *RequestConfig) (*http.R
 	}
 
 	if utilities.IsNil(config.BodyModel) {
-		return oa.httpRequestWithBuffer(httpMethod, config, nil)
+		return oa.httpRequestFromReader(httpMethod, config, nil)
+	}
+
+	if config.XWWWFormURLEncoded != nil {
+		if *config.XWWWFormURLEncoded {
+			url, e := utilities.StructToURL(config.BodyModel)
+			if e != nil {
+				return nil, nil, e
+			}
+
+			return oa.httpRequestFromReader(httpMethod, config, strings.NewReader(*url))
+		}
 	}
 
 	b, err := json.Marshal(config.BodyModel)
@@ -71,13 +84,13 @@ func (oa *OAuth2) httpRequest(httpMethod string, config *RequestConfig) (*http.R
 		return nil, nil, errortools.ErrorMessage(err)
 	}
 
-	return oa.httpRequestWithBuffer(httpMethod, config, bytes.NewBuffer(b))
+	return oa.httpRequestFromReader(httpMethod, config, bytes.NewBuffer(b))
 }
 
-func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, config *RequestConfig, body io.Reader) (*http.Request, *http.Response, *errortools.Error) {
+func (oa *OAuth2) httpRequestFromReader(httpMethod string, config *RequestConfig, reader io.Reader) (*http.Request, *http.Response, *errortools.Error) {
 	e := new(errortools.Error)
 
-	request, err := http.NewRequest(httpMethod, config.URL, body)
+	request, err := http.NewRequest(httpMethod, config.URL, reader)
 	e.SetRequest(request)
 	if err != nil {
 		e.SetMessage(err)
@@ -86,12 +99,13 @@ func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, config *RequestConfig
 
 	// default headers
 	request.Header.Set("Accept", "application/json")
-	if body != nil {
+	if reader != nil {
 		request.Header.Set("Content-Type", "application/json")
 	}
 
 	// Authorization header
 	accessToken := ""
+
 	if config.SkipAccessToken != nil {
 		if *config.SkipAccessToken {
 			goto tokenSkipped
