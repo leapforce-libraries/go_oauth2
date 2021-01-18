@@ -101,6 +101,12 @@ func (oa *OAuth2) httpRequestFromReader(httpMethod string, config *RequestConfig
 	request.Header.Set("Accept", "application/json")
 	if reader != nil {
 		request.Header.Set("Content-Type", "application/json")
+
+		if config.XWWWFormURLEncoded != nil {
+			if *config.XWWWFormURLEncoded {
+				request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			}
+		}
 	}
 
 	// Authorization header
