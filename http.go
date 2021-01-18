@@ -94,12 +94,14 @@ func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, config *RequestConfig
 	accessToken := ""
 	if config.SkipAccessToken != nil {
 		if *config.SkipAccessToken == false {
+			oa.lockToken()
+
 			_, e := oa.ValidateToken()
 			if e != nil {
 				return request, nil, e
 			}
 
-			oa.lockToken()
+			oa.unlockToken()
 
 			if oa.token == nil {
 				e.SetMessage("No Token.")
@@ -131,8 +133,6 @@ func (oa *OAuth2) httpRequestWithBuffer(httpMethod string, config *RequestConfig
 
 	// Send out the HTTP request
 	response, e := utilities.DoWithRetry(client, request, oa.maxRetries, oa.secondsBetweenRetries)
-
-	oa.unlockToken()
 
 	if response != nil {
 		// Check HTTP StatusCode
