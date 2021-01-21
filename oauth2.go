@@ -29,7 +29,6 @@ type OAuth2 struct {
 	getTokenFunction      *func() (*Token, *errortools.Error)
 	newTokenFunction      *func() (*Token, *errortools.Error)
 	saveTokenFunction     *func(token *Token) *errortools.Error
-	nonDefaultHeaders     *http.Header
 	token                 *Token
 	locationUTC           *time.Location
 	maxRetries            uint
@@ -48,7 +47,6 @@ type OAuth2Config struct {
 	GetTokenFunction      *func() (*Token, *errortools.Error)
 	NewTokenFunction      *func() (*Token, *errortools.Error)
 	SaveTokenFunction     *func(token *Token) *errortools.Error
-	NonDefaultHeaders     *http.Header
 	MaxRetries            *uint
 	SecondsBetweenRetries *uint32
 }
@@ -82,7 +80,6 @@ func NewOAuth(config OAuth2Config) *OAuth2 {
 		getTokenFunction:      config.GetTokenFunction,
 		newTokenFunction:      config.NewTokenFunction,
 		saveTokenFunction:     config.SaveTokenFunction,
-		nonDefaultHeaders:     config.NonDefaultHeaders,
 		locationUTC:           locUTC,
 		maxRetries:            maxRetries,
 		secondsBetweenRetries: secondsBetweenRetries,

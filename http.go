@@ -19,6 +19,7 @@ type RequestConfig struct {
 	BodyModel          interface{}
 	ResponseModel      interface{}
 	ErrorModel         interface{}
+	NonDefaultHeaders  *http.Header
 	SkipAccessToken    *bool
 	XWWWFormURLEncoded *bool
 }
@@ -105,10 +106,14 @@ func (oa *OAuth2) httpRequestFromReader(httpMethod string, config *RequestConfig
 	request.Header.Set("Accept", "application/json")
 	if reader != nil {
 		request.Header.Set("Content-Type", "application/json")
+	}
 
-		if config.XWWWFormURLEncoded != nil {
-			if *config.XWWWFormURLEncoded {
-				request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	// overrule with input headers
+	if config.NonDefaultHeaders != nil {
+		for key, values := range *config.NonDefaultHeaders {
+			request.Header.Del(key) //delete old header
+			for _, value := range values {
+				request.Header.Add(key, value) //add new header(s)
 			}
 		}
 	}
@@ -139,16 +144,6 @@ func (oa *OAuth2) httpRequestFromReader(httpMethod string, config *RequestConfig
 	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 tokenSkipped:
-
-	// overrule with input headers
-	if oa.nonDefaultHeaders != nil {
-		for key, values := range *oa.nonDefaultHeaders {
-			request.Header.Del(key) //delete old header
-			for _, value := range values {
-				request.Header.Add(key, value) //add new header(s)
-			}
-		}
-	}
 
 	// Send out the HTTP request
 	response, e = utilities.DoWithRetry(new(http.Client), request, oa.maxRetries, oa.secondsBetweenRetries)
