@@ -89,13 +89,16 @@ func (oa *OAuth2) httpRequest(httpMethod string, config *RequestConfig) (*http.R
 }
 
 func (oa *OAuth2) httpRequestFromReader(httpMethod string, config *RequestConfig, reader io.Reader) (*http.Request, *http.Response, *errortools.Error) {
-	e := new(errortools.Error)
+	var err error
+	var e *errortools.Error
+	var request *http.Request
+	var response *http.Response
+	var accessToken string
 
-	request, err := http.NewRequest(httpMethod, config.URL, reader)
-	e.SetRequest(request)
+	request, err = http.NewRequest(httpMethod, config.URL, reader)
 	if err != nil {
 		e.SetMessage(err)
-		return request, nil, e
+		goto exit
 	}
 
 	// default headers
@@ -111,8 +114,6 @@ func (oa *OAuth2) httpRequestFromReader(httpMethod string, config *RequestConfig
 	}
 
 	// Authorization header
-	accessToken := ""
-
 	if config.SkipAccessToken != nil {
 		if *config.SkipAccessToken {
 			goto tokenSkipped
@@ -121,17 +122,17 @@ func (oa *OAuth2) httpRequestFromReader(httpMethod string, config *RequestConfig
 
 	_, e = oa.ValidateToken()
 	if e != nil {
-		return request, nil, e
+		goto exit
 	}
 
 	if oa.token == nil {
 		e.SetMessage("No Token.")
-		return request, nil, e
+		goto exit
 	}
 
 	if (*oa.token).AccessToken == nil {
 		e.SetMessage("No AccessToken.")
-		return request, nil, e
+		goto exit
 	}
 
 	accessToken = *((*oa.token).AccessToken)
@@ -149,11 +150,9 @@ tokenSkipped:
 		}
 	}
 
-	client := new(http.Client)
-
 	// Send out the HTTP request
-	response, e := utilities.DoWithRetry(client, request, oa.maxRetries, oa.secondsBetweenRetries)
-
+	response, e = utilities.DoWithRetry(new(http.Client), request, oa.maxRetries, oa.secondsBetweenRetries)
+	e.SetResponse(response)
 	if response != nil {
 		// Check HTTP StatusCode
 		if response.StatusCode < 200 || response.StatusCode > 299 {
@@ -164,8 +163,6 @@ tokenSkipped:
 
 			if e == nil {
 				e = new(errortools.Error)
-				e.SetRequest(request)
-				e.SetResponse(response)
 			}
 
 			e.SetMessage(fmt.Sprintf("Server returned statuscode %v", response.StatusCode))
@@ -173,7 +170,7 @@ tokenSkipped:
 	}
 
 	if response.Body == nil {
-		return request, response, e
+		goto exit
 	}
 
 	if e != nil {
@@ -181,8 +178,7 @@ tokenSkipped:
 			err := oa.unmarshalError(response, config.ErrorModel)
 			errortools.CaptureInfo(err)
 		}
-
-		return request, response, e
+		goto exit
 	}
 
 	if !utilities.IsNil(config.ResponseModel) {
@@ -191,17 +187,20 @@ tokenSkipped:
 		b, err := ioutil.ReadAll(response.Body)
 		if err != nil {
 			e.SetMessage(err)
-			return request, response, e
+			goto exit
 		}
 
 		err = json.Unmarshal(b, &config.ResponseModel)
 		if err != nil {
 			e.SetMessage(err)
-			return request, response, e
+			goto exit
 		}
 	}
 
-	return request, response, nil
+exit:
+	e.SetRequest(request)
+	e.SetResponse(response)
+	return request, response, e
 }
 
 func (oa *OAuth2) unmarshalError(response *http.Response, errorModel interface{}) *errortools.Error {
