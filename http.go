@@ -197,8 +197,10 @@ tokenSkipped:
 	}
 
 exit:
-	e.SetRequest(request)
-	e.SetResponse(response)
+	if e != nil {
+		e.SetRequest(request)
+		e.SetResponse(response)
+	}
 	return request, response, e
 }
 
