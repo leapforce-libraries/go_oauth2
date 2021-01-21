@@ -210,7 +210,6 @@ func (oa *OAuth2) getToken(params *url.Values) *errortools.Error {
 }
 
 func (oa *OAuth2) setToken(token *Token) *errortools.Error {
-	fmt.Println("setToken")
 	if token != nil {
 		if token.ExpiresIn != nil {
 			var expiresInInt int64
