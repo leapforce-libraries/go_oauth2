@@ -55,9 +55,9 @@ func (oa *OAuth2) Delete(config *go_http.RequestConfig) (*http.Request, *http.Re
 	return oa.httpRequest(http.MethodDelete, config, false)
 }
 
-// HTTP returns http.Response for generic oAuth2 http call
+// HTTPRequest returns http.Response for generic oAuth2 http call
 //
-func (oa *OAuth2) HTTP(httpMethod string, config *go_http.RequestConfig, skipAccessToken bool) (*http.Request, *http.Response, *errortools.Error) {
+func (oa *OAuth2) HTTPRequest(httpMethod string, config *go_http.RequestConfig, skipAccessToken bool) (*http.Request, *http.Response, *errortools.Error) {
 	return oa.httpRequest(httpMethod, config, skipAccessToken)
 }
 
