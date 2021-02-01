@@ -11,62 +11,73 @@ import (
 	"strings"
 
 	errortools "github.com/leapforce-libraries/go_errortools"
+	go_http "github.com/leapforce-libraries/go_http"
 	utilities "github.com/leapforce-libraries/go_utilities"
 )
 
-type RequestConfig struct {
+type requestConfig struct {
 	URL                string
 	BodyModel          interface{}
 	ResponseModel      interface{}
 	ErrorModel         interface{}
 	NonDefaultHeaders  *http.Header
-	SkipAccessToken    *bool
 	XWWWFormURLEncoded *bool
+	SkipAccessToken    *bool
 }
 
 // Get returns http.Response for generic oAuth2 Get http call
 //
-func (oa *OAuth2) Get(config *RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodGet, config)
+func (oa *OAuth2) Get(config *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodGet, config, false)
 }
 
 // Post returns http.Response for generic oAuth2 Post http call
 //
-func (oa *OAuth2) Post(config *RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodPost, config)
+func (oa *OAuth2) Post(config *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodPost, config, false)
 }
 
 // Put returns http.Response for generic oAuth2 Put http call
 //
-func (oa *OAuth2) Put(config *RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodPut, config)
+func (oa *OAuth2) Put(config *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodPut, config, false)
 }
 
 // Patch returns http.Response for generic oAuth2 Patch http call
 //
-func (oa *OAuth2) Patch(config *RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodPatch, config)
+func (oa *OAuth2) Patch(config *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodPatch, config, false)
 }
 
 // Delete returns http.Response for generic oAuth2 Delete http call
 //
-func (oa *OAuth2) Delete(config *RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodDelete, config)
+func (oa *OAuth2) Delete(config *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(http.MethodDelete, config, false)
 }
 
 // HTTP returns http.Response for generic oAuth2 http call
 //
-func (oa *OAuth2) HTTP(httpMethod string, config *RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(httpMethod, config)
+func (oa *OAuth2) HTTP(httpMethod string, config *go_http.RequestConfig, skipAccessToken bool) (*http.Request, *http.Response, *errortools.Error) {
+	return oa.httpRequest(httpMethod, config, skipAccessToken)
 }
 
-func (oa *OAuth2) httpRequest(httpMethod string, config *RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+func (oa *OAuth2) httpRequest(httpMethod string, config *go_http.RequestConfig, skipAccessToken bool) (*http.Request, *http.Response, *errortools.Error) {
 	if config == nil {
 		return nil, nil, errortools.ErrorMessage("Request config may not be a nil pointer.")
 	}
 
-	if utilities.IsNil(config.BodyModel) {
-		return oa.httpRequestFromReader(httpMethod, config, nil)
+	requestConfig := &requestConfig{
+		URL:                config.URL,
+		BodyModel:          config.BodyModel,
+		ResponseModel:      config.ResponseModel,
+		ErrorModel:         config.ErrorModel,
+		NonDefaultHeaders:  config.NonDefaultHeaders,
+		XWWWFormURLEncoded: config.XWWWFormURLEncoded,
+		SkipAccessToken:    &skipAccessToken,
+	}
+
+	if utilities.IsNil(requestConfig.BodyModel) {
+		return oa.httpRequestFromReader(httpMethod, requestConfig, nil)
 	}
 
 	if config.XWWWFormURLEncoded != nil {
@@ -77,19 +88,19 @@ func (oa *OAuth2) httpRequest(httpMethod string, config *RequestConfig) (*http.R
 				return nil, nil, e
 			}
 
-			return oa.httpRequestFromReader(httpMethod, config, strings.NewReader(*url))
+			return oa.httpRequestFromReader(httpMethod, requestConfig, strings.NewReader(*url))
 		}
 	}
 
-	b, err := json.Marshal(config.BodyModel)
+	b, err := json.Marshal(requestConfig.BodyModel)
 	if err != nil {
 		return nil, nil, errortools.ErrorMessage(err)
 	}
 
-	return oa.httpRequestFromReader(httpMethod, config, bytes.NewBuffer(b))
+	return oa.httpRequestFromReader(httpMethod, requestConfig, bytes.NewBuffer(b))
 }
 
-func (oa *OAuth2) httpRequestFromReader(httpMethod string, config *RequestConfig, reader io.Reader) (*http.Request, *http.Response, *errortools.Error) {
+func (oa *OAuth2) httpRequestFromReader(httpMethod string, config *requestConfig, reader io.Reader) (*http.Request, *http.Response, *errortools.Error) {
 	var err error
 	var e *errortools.Error
 	var request *http.Request
