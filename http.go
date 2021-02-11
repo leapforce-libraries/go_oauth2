@@ -197,6 +197,9 @@ tokenSkipped:
 
 		err = json.Unmarshal(b, &config.ResponseModel)
 		if err != nil {
+			if e == nil {
+				e = new(errortools.Error)
+			}
 			e.SetMessage(err)
 			goto exit
 		}
