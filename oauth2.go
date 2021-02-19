@@ -19,36 +19,32 @@ import (
 type OAuth2 struct {
 	// config
 	//apiName               string
-	clientID              string
-	clientSecret          string
-	scope                 string
-	redirectURL           string
-	authURL               string
-	tokenURL              string
-	tokenHTTPMethod       string
-	getTokenFunction      *func() (*Token, *errortools.Error)
-	newTokenFunction      *func() (*Token, *errortools.Error)
-	saveTokenFunction     *func(token *Token) *errortools.Error
-	token                 *Token
-	locationUTC           *time.Location
-	maxRetries            uint
-	secondsBetweenRetries uint32
+	clientID          string
+	clientSecret      string
+	scope             string
+	redirectURL       string
+	authURL           string
+	tokenURL          string
+	tokenHTTPMethod   string
+	getTokenFunction  *func() (*Token, *errortools.Error)
+	newTokenFunction  *func() (*Token, *errortools.Error)
+	saveTokenFunction *func(token *Token) *errortools.Error
+	token             *Token
+	locationUTC       *time.Location
 }
 
 type OAuth2Config struct {
 	//APIName               string
-	ClientID              string
-	ClientSecret          string
-	Scope                 string
-	RedirectURL           string
-	AuthURL               string
-	TokenURL              string
-	TokenHTTPMethod       string
-	GetTokenFunction      *func() (*Token, *errortools.Error)
-	NewTokenFunction      *func() (*Token, *errortools.Error)
-	SaveTokenFunction     *func(token *Token) *errortools.Error
-	MaxRetries            *uint
-	SecondsBetweenRetries *uint32
+	ClientID          string
+	ClientSecret      string
+	Scope             string
+	RedirectURL       string
+	AuthURL           string
+	TokenURL          string
+	TokenHTTPMethod   string
+	GetTokenFunction  *func() (*Token, *errortools.Error)
+	NewTokenFunction  *func() (*Token, *errortools.Error)
+	SaveTokenFunction *func(token *Token) *errortools.Error
 }
 
 type ApiError struct {
@@ -58,31 +54,19 @@ type ApiError struct {
 
 func NewOAuth(config OAuth2Config) *OAuth2 {
 	locUTC, _ := time.LoadLocation("UTC")
-	maxRetries := uint(0)
-	secondsBetweenRetries := uint32(3)
-
-	if config.MaxRetries != nil {
-		maxRetries = *config.MaxRetries
-	}
-
-	if config.SecondsBetweenRetries != nil {
-		secondsBetweenRetries = *config.SecondsBetweenRetries
-	}
 
 	return &OAuth2{
-		clientID:              config.ClientID,
-		clientSecret:          config.ClientSecret,
-		scope:                 config.Scope,
-		redirectURL:           config.RedirectURL,
-		authURL:               config.AuthURL,
-		tokenURL:              config.TokenURL,
-		tokenHTTPMethod:       config.TokenHTTPMethod,
-		getTokenFunction:      config.GetTokenFunction,
-		newTokenFunction:      config.NewTokenFunction,
-		saveTokenFunction:     config.SaveTokenFunction,
-		locationUTC:           locUTC,
-		maxRetries:            maxRetries,
-		secondsBetweenRetries: secondsBetweenRetries,
+		clientID:          config.ClientID,
+		clientSecret:      config.ClientSecret,
+		scope:             config.Scope,
+		redirectURL:       config.RedirectURL,
+		authURL:           config.AuthURL,
+		tokenURL:          config.TokenURL,
+		tokenHTTPMethod:   config.TokenHTTPMethod,
+		getTokenFunction:  config.GetTokenFunction,
+		newTokenFunction:  config.NewTokenFunction,
+		saveTokenFunction: config.SaveTokenFunction,
+		locationUTC:       locUTC,
 	}
 }
 
