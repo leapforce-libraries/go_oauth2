@@ -157,7 +157,7 @@ func (oa *OAuth2) httpRequestFromReader(httpMethod string, config *requestConfig
 tokenSkipped:
 
 	// Send out the HTTP request
-	response, e = utilities.DoWithRetry(new(http.Client), request, oa.maxRetries, oa.secondsBetweenRetries)
+	response, e = utilities.DoWithRetry(new(http.Client), request)
 	if response != nil {
 		// Check HTTP StatusCode
 		if response.StatusCode < 200 || response.StatusCode > 299 {

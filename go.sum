@@ -275,6 +275,10 @@ github.com/leapforce-libraries/go_google v0.0.0-20201229222039-b93139831efe h1:g
 github.com/leapforce-libraries/go_google v0.0.0-20201229222039-b93139831efe/go.mod h1:v85fsDaMJSrUfrf7PrQO3yTXacZYwG/G6Y8hFL1s+4E=
 github.com/leapforce-libraries/go_http v0.0.0-20210201153939-7377a0b73fe0 h1:UE549/g4K+f9A6ZwhRrxprYq6CbIFXo1owttc8ZNUDw=
 github.com/leapforce-libraries/go_http v0.0.0-20210201153939-7377a0b73fe0/go.mod h1:xqKc0io3rZB/bCsH8/F1diK3JGJacZv/2IBYF7lIWt4=
+github.com/leapforce-libraries/go_http v0.0.0-20210208175749-7dd156a8da26 h1:GW0ltZYEqHNbuzyAr/n/pSxg/95IRKTAtBE/QgpL/as=
+github.com/leapforce-libraries/go_http v0.0.0-20210208175749-7dd156a8da26/go.mod h1:xqKc0io3rZB/bCsH8/F1diK3JGJacZv/2IBYF7lIWt4=
+github.com/leapforce-libraries/go_http v0.0.0-20210219130405-85d07ecd3d24 h1:cYVZQoME1JO4tNW1KWBmKscSUgrGx4lcYUXAJGJKibk=
+github.com/leapforce-libraries/go_http v0.0.0-20210219130405-85d07ecd3d24/go.mod h1:S7FqNixxCzSoVZHYlnZS45EpAtENc+X7y+CvQlJWurg=
 github.com/leapforce-libraries/go_oauth2 v0.0.0-20201205100818-a1a9276a6c5c/go.mod h1:R8mVpjxMz+L+Ovdr/ujheDyUNcEEEVHRdvXtstVeTZc=
 github.com/leapforce-libraries/go_types v0.0.0-20201101222114-6d3ec3839c8c h1:4GY1e071Gyk2sBn8mMVi2rI+DUnqIUP3/IAHvND39w8=
 github.com/leapforce-libraries/go_types v0.0.0-20201101222114-6d3ec3839c8c/go.mod h1:0k0QPi4o2OO3yau759B2U5XIEPbuYTf56QxyF8WdV4o=
@@ -306,6 +310,8 @@ github.com/leapforce-libraries/go_utilities v0.0.0-20210118211054-a09bf4a54eda h
 github.com/leapforce-libraries/go_utilities v0.0.0-20210118211054-a09bf4a54eda/go.mod h1:i+C6R2dATK2RsD5+XDV9VqkKSB64SDA+zSLhCKsAyVI=
 github.com/leapforce-libraries/go_utilities v0.0.0-20210118212300-a6ca21d85d59 h1:oRBJnssP56/pSgrVHgRlVZHaG+/zppUnekrwTRsxF8Y=
 github.com/leapforce-libraries/go_utilities v0.0.0-20210118212300-a6ca21d85d59/go.mod h1:i+C6R2dATK2RsD5+XDV9VqkKSB64SDA+zSLhCKsAyVI=
+github.com/leapforce-libraries/go_utilities v0.0.0-20210218124037-13855c484ece h1:UiBAflWDM7tkOUKjT8EEtZlSHbdy+/z/dQ1BmatMJjk=
+github.com/leapforce-libraries/go_utilities v0.0.0-20210218124037-13855c484ece/go.mod h1:i+C6R2dATK2RsD5+XDV9VqkKSB64SDA+zSLhCKsAyVI=
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/mattn/go-colorable v0.1.2/go.mod h1:U0ppj6V5qS13XJ6of8GYAs25YV2eR4EVcfRqFIhoBtE=
 github.com/mattn/go-isatty v0.0.7/go.mod h1:Iq45c/XA43vh69/j3iqttzPXn0bhXyGjM0Hdxcsrc5s=
