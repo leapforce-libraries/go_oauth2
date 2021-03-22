@@ -172,10 +172,10 @@ tokenSkipped:
 
 			e.SetMessage(fmt.Sprintf("Server returned statuscode %v", response.StatusCode))
 		}
-	}
 
-	if response.Body == nil {
-		goto exit
+		if response.Body == nil {
+			goto exit
+		}
 	}
 
 	if e != nil {
