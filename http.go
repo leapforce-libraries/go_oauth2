@@ -22,6 +22,7 @@ type requestConfig struct {
 	ErrorModel         interface{}
 	NonDefaultHeaders  *http.Header
 	XWWWFormURLEncoded *bool
+	MaxRetries         *uint
 	SkipAccessToken    *bool
 }
 
@@ -73,6 +74,7 @@ func (oa *OAuth2) httpRequest(httpMethod string, config *go_http.RequestConfig, 
 		ErrorModel:         config.ErrorModel,
 		NonDefaultHeaders:  config.NonDefaultHeaders,
 		XWWWFormURLEncoded: config.XWWWFormURLEncoded,
+		MaxRetries:         config.MaxRetries,
 		SkipAccessToken:    &skipAccessToken,
 	}
 
@@ -157,7 +159,7 @@ func (oa *OAuth2) httpRequestFromReader(httpMethod string, config *requestConfig
 tokenSkipped:
 
 	// Send out the HTTP request
-	response, e = utilities.DoWithRetry(new(http.Client), request)
+	response, e = utilities.DoWithRetry(new(http.Client), request, config.MaxRetries)
 	if response != nil {
 		// Check HTTP StatusCode
 		if response.StatusCode < 200 || response.StatusCode > 299 {
