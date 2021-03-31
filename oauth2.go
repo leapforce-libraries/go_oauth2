@@ -318,8 +318,6 @@ func (oa *OAuth2) ValidateToken() (*Token, *errortools.Error) {
 
 func (oa *OAuth2) initTokenNeeded() *errortools.Error {
 	message := fmt.Sprintf("No valid accesscode or refreshcode found. Please generate new token by running command:\noauth2_token.exe %s", oa.clientID)
-	fmt.Println(message)
-
 	return errortools.ErrorMessage(message)
 }
 
@@ -330,8 +328,10 @@ func (oa *OAuth2) InitToken() *errortools.Error {
 
 	url2 := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", oa.authURL, oa.clientID, url.PathEscape(oa.redirectURL), url.PathEscape(oa.scope))
 
-	fmt.Println("Go to this url to get new access token:\n")
-	fmt.Println(url2 + "\n")
+	fmt.Println("Go to this url to get new access token:")
+	fmt.Println()
+	fmt.Println(url2)
+	fmt.Println()
 
 	// Create a new redirect route
 	http.HandleFunc("/oauth/redirect", func(w http.ResponseWriter, r *http.Request) {
