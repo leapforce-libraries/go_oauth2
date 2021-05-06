@@ -48,6 +48,8 @@ func (service *OAuth2) GetAccessTokenFromCode(r *http.Request) *errortools.Error
 		NonDefaultHeaders: &header,
 	}
 
+	fmt.Println(requestConfig.URL)
+
 	_, response, e := service.httpService.HTTPRequest(service.tokenHTTPMethod, &requestConfig)
 	if e != nil {
 		return e
@@ -67,6 +69,8 @@ func (service *OAuth2) GetAccessTokenFromCode(r *http.Request) *errortools.Error
 	}
 
 	token := Token{}
+
+	fmt.Println(string(b))
 
 	err = json.Unmarshal(b, &token)
 	if err != nil {
