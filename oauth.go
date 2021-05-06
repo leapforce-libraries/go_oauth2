@@ -56,12 +56,11 @@ func (service *OAuth2) GetAccessTokenFromCode(r *http.Request) *errortools.Error
 		BodyModel:         body,
 	}
 
-	fmt.Println(requestConfig.URL)
-
 	_, response, e := service.httpService.HTTPRequest(service.tokenHTTPMethod, &requestConfig)
 	if e != nil {
 		return e
 	}
+	fmt.Println(response.StatusCode)
 
 	if response == nil {
 		return errortools.ErrorMessage("Response is nil")
