@@ -12,6 +12,7 @@ import (
 	"time"
 
 	errortools "github.com/leapforce-libraries/go_errortools"
+	go_http "github.com/leapforce-libraries/go_http"
 )
 
 // OAuth2 stores OAuth2 configuration
@@ -31,6 +32,7 @@ type OAuth2 struct {
 	saveTokenFunction *func(token *Token) *errortools.Error
 	token             *Token
 	locationUTC       *time.Location
+	httpService       *go_http.Service
 }
 
 type OAuth2Config struct {
@@ -52,8 +54,13 @@ type ApiError struct {
 	Description string `json:"error_description,omitempty"`
 }
 
-func NewOAuth(config OAuth2Config) *OAuth2 {
+func NewOAuth(config OAuth2Config) (*OAuth2, *errortools.Error) {
 	locUTC, _ := time.LoadLocation("UTC")
+
+	httpService, e := go_http.NewService(&go_http.ServiceConfig{})
+	if e != nil {
+		return nil, e
+	}
 
 	return &OAuth2{
 		clientID:          config.ClientID,
@@ -67,7 +74,8 @@ func NewOAuth(config OAuth2Config) *OAuth2 {
 		newTokenFunction:  config.NewTokenFunction,
 		saveTokenFunction: config.SaveTokenFunction,
 		locationUTC:       locUTC,
-	}
+		httpService:       httpService,
+	}, nil
 }
 
 func (oa *OAuth2) lockToken() {
