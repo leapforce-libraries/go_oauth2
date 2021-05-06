@@ -6,8 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
-	"strings"
 
 	errortools "github.com/leapforce-libraries/go_errortools"
 	go_http "github.com/leapforce-libraries/go_http"
@@ -34,33 +32,37 @@ func (service *OAuth2) GetAccessTokenFromCode(r *http.Request) *errortools.Error
 	}
 
 	// STEP 3: Convert the request token into a usable access token
-	params := url.Values{}
-	params.Set("client_id", service.clientID)
-	params.Set("client_secret", service.clientSecret)
-	params.Set("code", authorizationCode)
-	params.Set("grant_type", "authorization_code")
-	params.Set("redirect_uri", service.redirectURL)
-
-	// create body
-	encoded := params.Encode()
-	body := strings.NewReader(encoded)
+	body := struct {
+		ClientID     string `json:"client_id"`
+		ClientSecret string `json:"client_secret"`
+		Code         string `json:"code"`
+		GrantType    string `json:"grant_type"`
+		RedirectURI  string `json:"redirect_uri"`
+	}{
+		service.clientID,
+		service.clientSecret,
+		authorizationCode,
+		"authorization_code",
+		service.redirectURL,
+	}
 
 	// set extra headers
 	header := http.Header{}
 	header.Set("Content-Type", "application/x-www-form-urlencoded")
-	header.Set("Content-Length", strconv.Itoa(len(encoded)))
 
+	t := true
 	requestConfig := go_http.RequestConfig{
-		URL:               service.tokenURL,
-		NonDefaultHeaders: &header,
-		BodyModel:         body,
+		URL:                service.tokenURL,
+		NonDefaultHeaders:  &header,
+		BodyModel:          body,
+		XWWWFormURLEncoded: &t,
 	}
 
 	_, response, e := service.httpService.HTTPRequest(service.tokenHTTPMethod, &requestConfig)
+	fmt.Println(response.StatusCode)
 	if e != nil {
 		return e
 	}
-	fmt.Println(response.StatusCode)
 
 	if response == nil {
 		return errortools.ErrorMessage("Response is nil")
