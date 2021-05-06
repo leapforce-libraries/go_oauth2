@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 
 	errortools "github.com/leapforce-libraries/go_errortools"
 	go_http "github.com/leapforce-libraries/go_http"
@@ -39,13 +41,19 @@ func (service *OAuth2) GetAccessTokenFromCode(r *http.Request) *errortools.Error
 	params.Set("grant_type", "authorization_code")
 	params.Set("redirect_uri", service.redirectURL)
 
-	// add authentication header
+	// create body
+	encoded := params.Encode()
+	body := strings.NewReader(encoded)
+
+	// set extra headers
 	header := http.Header{}
 	header.Set("Content-Type", "application/x-www-form-urlencoded")
+	header.Set("Content-Length", strconv.Itoa(len(encoded)))
 
 	requestConfig := go_http.RequestConfig{
-		URL:               fmt.Sprintf("%s?%s", service.tokenURL, params.Encode()),
+		URL:               service.tokenURL,
 		NonDefaultHeaders: &header,
+		BodyModel:         body,
 	}
 
 	fmt.Println(requestConfig.URL)
