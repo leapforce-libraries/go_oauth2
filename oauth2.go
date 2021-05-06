@@ -54,7 +54,11 @@ type ApiError struct {
 	Description string `json:"error_description,omitempty"`
 }
 
-func NewOAuth(config OAuth2Config) (*OAuth2, *errortools.Error) {
+func NewOAuth(config *OAuth2Config) (*OAuth2, *errortools.Error) {
+	if config == nil {
+		return nil, errortools.ErrorMessage("Config must not be a nil pointer")
+	}
+
 	locUTC, _ := time.LoadLocation("UTC")
 
 	httpService, e := go_http.NewService(&go_http.ServiceConfig{})
