@@ -59,30 +59,34 @@ func (service *OAuth2) GetAccessTokenFromCode(r *http.Request) *errortools.Error
 	}
 
 	_, response, e := service.httpService.HTTPRequest(service.tokenHTTPMethod, &requestConfig)
-	fmt.Println(response.StatusCode)
 	if e != nil {
+		fmt.Println(122)
 		return e
 	}
 
 	if response == nil {
+		fmt.Println(123)
 		return errortools.ErrorMessage("Response is nil")
 	}
 	if response.Body == nil {
+		fmt.Println(124)
 		return errortools.ErrorMessage("Response body is nil")
 	}
 
 	defer response.Body.Close()
 	b, err := ioutil.ReadAll(response.Body)
 	if err != nil {
+		fmt.Println(125)
 		return errortools.ErrorMessage(err)
 	}
 
 	token := Token{}
 
-	fmt.Println(string(b))
+	fmt.Println("b", string(b))
 
 	err = json.Unmarshal(b, &token)
 	if err != nil {
+		fmt.Println(126)
 		return errortools.ErrorMessage(err)
 	}
 
