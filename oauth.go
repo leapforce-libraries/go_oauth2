@@ -39,8 +39,13 @@ func (service *OAuth2) GetAccessTokenFromCode(r *http.Request) *errortools.Error
 	params.Set("grant_type", "authorization_code")
 	params.Set("redirect_uri", service.redirectURL)
 
+	// add authentication header
+	header := http.Header{}
+	header.Set("Content-Type", "application/x-www-form-urlencoded")
+
 	requestConfig := go_http.RequestConfig{
-		URL: fmt.Sprintf("%s?%s", service.tokenURL, params.Encode()),
+		URL:               fmt.Sprintf("%s?%s", service.tokenURL, params.Encode()),
+		NonDefaultHeaders: &header,
 	}
 
 	_, response, e := service.httpService.HTTPRequest(service.tokenHTTPMethod, &requestConfig)
