@@ -173,7 +173,6 @@ tokenSkipped:
 			if e == nil {
 				e = new(errortools.Error)
 			}
-
 			e.SetMessage(fmt.Sprintf("Server returned statuscode %v", response.StatusCode))
 		}
 
@@ -195,6 +194,9 @@ tokenSkipped:
 
 		b, err := ioutil.ReadAll(response.Body)
 		if err != nil {
+			if e == nil {
+				e = new(errortools.Error)
+			}
 			e.SetMessage(err)
 			goto exit
 		}
