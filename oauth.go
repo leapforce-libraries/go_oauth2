@@ -9,7 +9,7 @@ import (
 	go_http "github.com/leapforce-libraries/go_http"
 )
 
-func (service *OAuth2) AuthorizeURL() string {
+func (service *Service) AuthorizeURL() string {
 	params := url.Values{}
 	params.Set("redirect_uri", service.redirectURL)
 	params.Set("client_id", service.clientID)
@@ -23,7 +23,7 @@ func (service *OAuth2) AuthorizeURL() string {
 	return fmt.Sprintf("%s?%s", service.authURL, params.Encode())
 }
 
-func (service *OAuth2) GetAccessTokenFromCode(r *http.Request) *errortools.Error {
+func (service *Service) GetAccessTokenFromCode(r *http.Request) *errortools.Error {
 	authorizationCode := r.URL.Query().Get("code")
 	if authorizationCode == "" {
 		return errortools.ErrorMessage("RedirectURL does not contain 'code' parameter")
@@ -62,16 +62,13 @@ func (service *OAuth2) GetAccessTokenFromCode(r *http.Request) *errortools.Error
 
 	_, response, e := service.httpService.HTTPRequest(service.tokenHTTPMethod, &requestConfig)
 	if e != nil {
-		fmt.Println(122)
 		return e
 	}
 
 	if response == nil {
-		fmt.Println(123)
 		return errortools.ErrorMessage("Response is nil")
 	}
 	if response.Body == nil {
-		fmt.Println(124)
 		return errortools.ErrorMessage("Response body is nil")
 	}
 

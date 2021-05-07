@@ -28,41 +28,41 @@ type requestConfig struct {
 
 // Get returns http.Response for generic oAuth2 Get http call
 //
-func (oa *OAuth2) Get(config *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodGet, config, false)
+func (service *Service) Get(config *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return service.httpRequest(http.MethodGet, config, false)
 }
 
 // Post returns http.Response for generic oAuth2 Post http call
 //
-func (oa *OAuth2) Post(config *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodPost, config, false)
+func (service *Service) Post(config *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return service.httpRequest(http.MethodPost, config, false)
 }
 
 // Put returns http.Response for generic oAuth2 Put http call
 //
-func (oa *OAuth2) Put(config *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodPut, config, false)
+func (service *Service) Put(config *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return service.httpRequest(http.MethodPut, config, false)
 }
 
 // Patch returns http.Response for generic oAuth2 Patch http call
 //
-func (oa *OAuth2) Patch(config *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodPatch, config, false)
+func (service *Service) Patch(config *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return service.httpRequest(http.MethodPatch, config, false)
 }
 
 // Delete returns http.Response for generic oAuth2 Delete http call
 //
-func (oa *OAuth2) Delete(config *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(http.MethodDelete, config, false)
+func (service *Service) Delete(config *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return service.httpRequest(http.MethodDelete, config, false)
 }
 
 // HTTPRequest returns http.Response for generic oAuth2 http call
 //
-func (oa *OAuth2) HTTPRequest(httpMethod string, config *go_http.RequestConfig, skipAccessToken bool) (*http.Request, *http.Response, *errortools.Error) {
-	return oa.httpRequest(httpMethod, config, skipAccessToken)
+func (service *Service) HTTPRequest(httpMethod string, config *go_http.RequestConfig, skipAccessToken bool) (*http.Request, *http.Response, *errortools.Error) {
+	return service.httpRequest(httpMethod, config, skipAccessToken)
 }
 
-func (oa *OAuth2) httpRequest(httpMethod string, config *go_http.RequestConfig, skipAccessToken bool) (*http.Request, *http.Response, *errortools.Error) {
+func (service *Service) httpRequest(httpMethod string, config *go_http.RequestConfig, skipAccessToken bool) (*http.Request, *http.Response, *errortools.Error) {
 	if config == nil {
 		return nil, nil, errortools.ErrorMessage("Request config may not be a nil pointer.")
 	}
@@ -79,7 +79,7 @@ func (oa *OAuth2) httpRequest(httpMethod string, config *go_http.RequestConfig, 
 	}
 
 	if utilities.IsNil(requestConfig.BodyModel) {
-		return oa.httpRequestFromReader(httpMethod, requestConfig, nil)
+		return service.httpRequestFromReader(httpMethod, requestConfig, nil)
 	}
 
 	if config.XWWWFormURLEncoded != nil {
@@ -90,7 +90,7 @@ func (oa *OAuth2) httpRequest(httpMethod string, config *go_http.RequestConfig, 
 				return nil, nil, e
 			}
 
-			return oa.httpRequestFromReader(httpMethod, requestConfig, strings.NewReader(*url))
+			return service.httpRequestFromReader(httpMethod, requestConfig, strings.NewReader(*url))
 		}
 	}
 
@@ -99,10 +99,10 @@ func (oa *OAuth2) httpRequest(httpMethod string, config *go_http.RequestConfig, 
 		return nil, nil, errortools.ErrorMessage(err)
 	}
 
-	return oa.httpRequestFromReader(httpMethod, requestConfig, bytes.NewBuffer(b))
+	return service.httpRequestFromReader(httpMethod, requestConfig, bytes.NewBuffer(b))
 }
 
-func (oa *OAuth2) httpRequestFromReader(httpMethod string, config *requestConfig, reader io.Reader) (*http.Request, *http.Response, *errortools.Error) {
+func (service *Service) httpRequestFromReader(httpMethod string, config *requestConfig, reader io.Reader) (*http.Request, *http.Response, *errortools.Error) {
 	var err error
 	var e *errortools.Error
 	var request *http.Request
@@ -138,27 +138,29 @@ func (oa *OAuth2) httpRequestFromReader(httpMethod string, config *requestConfig
 		}
 	}
 
-	_, e = oa.ValidateToken()
+	_, e = service.ValidateToken()
 	if e != nil {
 		goto exit
 	}
 
-	if oa.token == nil {
+	if service.token == nil {
 		e.SetMessage("No Token.")
 		goto exit
 	}
 
-	if (*oa.token).AccessToken == nil {
+	if (*service.token).AccessToken == nil {
 		e.SetMessage("No AccessToken.")
 		goto exit
 	}
 
-	accessToken = *((*oa.token).AccessToken)
+	accessToken = *((*service.token).AccessToken)
 	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 tokenSkipped:
 
 	// Send out the HTTP request
+	service.apiCallCount++
+
 	response, e = utilities.DoWithRetry(new(http.Client), request, config.MaxRetries)
 	if response != nil {
 		// Check HTTP StatusCode
@@ -182,7 +184,7 @@ tokenSkipped:
 
 	if e != nil {
 		if !utilities.IsNil(config.ErrorModel) {
-			err := oa.unmarshalError(response, config.ErrorModel)
+			err := service.unmarshalError(response, config.ErrorModel)
 			errortools.CaptureInfo(err)
 		}
 		goto exit
@@ -215,7 +217,7 @@ exit:
 	return request, response, e
 }
 
-func (oa *OAuth2) unmarshalError(response *http.Response, errorModel interface{}) *errortools.Error {
+func (service *Service) unmarshalError(response *http.Response, errorModel interface{}) *errortools.Error {
 	if response == nil {
 		return nil
 	}

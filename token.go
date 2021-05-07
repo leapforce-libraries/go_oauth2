@@ -59,7 +59,11 @@ func (t *Token) Print() {
 	}
 }
 
-func (oa *OAuth2) unlockToken() {
+func (*Service) lockToken() {
+	tokenMutex.Lock()
+}
+
+func (*Service) unlockToken() {
 	tokenMutex.Unlock()
 }
 

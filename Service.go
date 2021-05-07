@@ -15,11 +15,7 @@ import (
 	go_http "github.com/leapforce-libraries/go_http"
 )
 
-// OAuth2 stores OAuth2 configuration
-//
-type OAuth2 struct {
-	// config
-	//apiName               string
+type Service struct {
 	clientID          string
 	clientSecret      string
 	scope             string
@@ -33,10 +29,10 @@ type OAuth2 struct {
 	token             *Token
 	locationUTC       *time.Location
 	httpService       *go_http.Service
+	apiCallCount      int64
 }
 
-type OAuth2Config struct {
-	//APIName               string
+type ServiceConfig struct {
 	ClientID          string
 	ClientSecret      string
 	Scope             string
@@ -54,9 +50,9 @@ type ApiError struct {
 	Description string `json:"error_description,omitempty"`
 }
 
-func NewOAuth(config *OAuth2Config) (*OAuth2, *errortools.Error) {
-	if config == nil {
-		return nil, errortools.ErrorMessage("Config must not be a nil pointer")
+func NewService(serviceConfig *ServiceConfig) (*Service, *errortools.Error) {
+	if serviceConfig == nil {
+		return nil, errortools.ErrorMessage("ServiceConfig must not be a nil pointer")
 	}
 
 	locUTC, _ := time.LoadLocation("UTC")
@@ -66,35 +62,31 @@ func NewOAuth(config *OAuth2Config) (*OAuth2, *errortools.Error) {
 		return nil, e
 	}
 
-	return &OAuth2{
-		clientID:          config.ClientID,
-		clientSecret:      config.ClientSecret,
-		scope:             config.Scope,
-		redirectURL:       config.RedirectURL,
-		authURL:           config.AuthURL,
-		tokenURL:          config.TokenURL,
-		tokenHTTPMethod:   config.TokenHTTPMethod,
-		getTokenFunction:  config.GetTokenFunction,
-		newTokenFunction:  config.NewTokenFunction,
-		saveTokenFunction: config.SaveTokenFunction,
+	return &Service{
+		clientID:          serviceConfig.ClientID,
+		clientSecret:      serviceConfig.ClientSecret,
+		scope:             serviceConfig.Scope,
+		redirectURL:       serviceConfig.RedirectURL,
+		authURL:           serviceConfig.AuthURL,
+		tokenURL:          serviceConfig.TokenURL,
+		tokenHTTPMethod:   serviceConfig.TokenHTTPMethod,
+		getTokenFunction:  serviceConfig.GetTokenFunction,
+		newTokenFunction:  serviceConfig.NewTokenFunction,
+		saveTokenFunction: serviceConfig.SaveTokenFunction,
 		locationUTC:       locUTC,
 		httpService:       httpService,
 	}, nil
 }
 
-func (oa *OAuth2) lockToken() {
-	tokenMutex.Lock()
-}
-
-func (oa *OAuth2) getToken(params *url.Values) *errortools.Error {
+func (service *Service) getToken(params *url.Values) *errortools.Error {
 	request := new(http.Request)
 
-	fmt.Println(oa.tokenHTTPMethod)
+	fmt.Println(service.tokenHTTPMethod)
 
 	e := new(errortools.Error)
 
-	if oa.tokenHTTPMethod == http.MethodGet {
-		url := oa.tokenURL
+	if service.tokenHTTPMethod == http.MethodGet {
+		url := service.tokenURL
 
 		if params != nil {
 			if len(*params) > 0 {
@@ -112,7 +104,7 @@ func (oa *OAuth2) getToken(params *url.Values) *errortools.Error {
 		}
 
 		request = req
-	} else if oa.tokenHTTPMethod == http.MethodPost {
+	} else if service.tokenHTTPMethod == http.MethodPost {
 
 		encoded := ""
 		body := new(strings.Reader)
@@ -121,7 +113,7 @@ func (oa *OAuth2) getToken(params *url.Values) *errortools.Error {
 			body = strings.NewReader(encoded)
 		}
 
-		req, err := http.NewRequest(http.MethodPost, oa.tokenURL, body)
+		req, err := http.NewRequest(http.MethodPost, service.tokenURL, body)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Content-Length", strconv.Itoa(len(encoded)))
 		req.Header.Set("Accept", "application/json")
@@ -133,7 +125,7 @@ func (oa *OAuth2) getToken(params *url.Values) *errortools.Error {
 
 		request = req
 	} else {
-		e.SetMessage(fmt.Sprintf("Invalid TokenHTTPMethod: %s", oa.tokenHTTPMethod))
+		e.SetMessage(fmt.Sprintf("Invalid TokenHTTPMethod: %s", service.tokenHTTPMethod))
 		return e
 	}
 
@@ -163,10 +155,10 @@ func (oa *OAuth2) getToken(params *url.Values) *errortools.Error {
 		//message := fmt.Sprintln("Error:", res.StatusCode, eoError.Error, ", ", eoError.Description)
 		//fmt.Println(message)
 
-		oa.token.Print()
+		service.token.Print()
 
 		if res.StatusCode == 401 {
-			return oa.initTokenNeeded()
+			return service.initTokenNeeded()
 		}
 
 		e.SetMessage(fmt.Sprintf("Server returned statuscode %v, url: %s", res.StatusCode, request.URL))
@@ -181,20 +173,20 @@ func (oa *OAuth2) getToken(params *url.Values) *errortools.Error {
 		return e
 	}
 
-	e = oa.setToken(&token)
+	e = service.setToken(&token)
 	if e != nil {
 		return e
 	}
 
-	if oa.saveTokenFunction != nil {
-		e = (*oa.saveTokenFunction)(&token)
+	if service.saveTokenFunction != nil {
+		e = (*service.saveTokenFunction)(&token)
 		if e != nil {
 			return e
 		}
 	}
 
 	/*
-		ee = oa.saveTokenToBigQuery()
+		ee = service.saveTokenToBigQuery()
 		if ee != nil {
 			return ee
 		}*/
@@ -202,7 +194,7 @@ func (oa *OAuth2) getToken(params *url.Values) *errortools.Error {
 	return nil
 }
 
-func (oa *OAuth2) setToken(token *Token) *errortools.Error {
+func (service *Service) setToken(token *Token) *errortools.Error {
 	if token != nil {
 		if token.ExpiresIn != nil {
 			var expiresInInt int64
@@ -221,7 +213,7 @@ func (oa *OAuth2) setToken(token *Token) *errortools.Error {
 			}
 
 			//convert to UTC
-			expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(oa.locationUTC)
+			expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(service.locationUTC)
 			token.Expiry = &expiry
 		} else {
 			token.Expiry = nil
@@ -230,115 +222,115 @@ func (oa *OAuth2) setToken(token *Token) *errortools.Error {
 
 	token.Print()
 
-	oa.token = token
+	service.token = token
 
 	return nil
 }
 
-func (oa *OAuth2) getTokenFromCode(code string) *errortools.Error {
+func (service *Service) getTokenFromCode(code string) *errortools.Error {
 	data := url.Values{}
-	data.Set("client_id", oa.clientID)
-	data.Set("client_secret", oa.clientSecret)
+	data.Set("client_id", service.clientID)
+	data.Set("client_secret", service.clientSecret)
 	data.Set("code", code)
 	data.Set("grant_type", "authorization_code")
-	data.Set("redirect_uri", oa.redirectURL)
+	data.Set("redirect_uri", service.redirectURL)
 
-	return oa.getToken(&data)
+	return service.getToken(&data)
 }
 
-func (oa *OAuth2) getTokenFromRefreshToken() *errortools.Error {
+func (service *Service) getTokenFromRefreshToken() *errortools.Error {
 	fmt.Println("***getTokenFromRefreshToken***")
 
 	//always get refresh token from BQ prior to using it
-	if oa.getTokenFunction != nil {
+	if service.getTokenFunction != nil {
 		// retrieve AccessCode from BigQuery
-		token, e := (*oa.getTokenFunction)()
+		token, e := (*service.getTokenFunction)()
 		if e != nil {
 			return e
 		}
 
-		oa.token = token
+		service.token = token
 
-		oa.token.Print()
+		service.token.Print()
 	}
 
-	if !oa.token.hasRefreshToken() {
-		return oa.initTokenNeeded()
+	if !service.token.hasRefreshToken() {
+		return service.initTokenNeeded()
 	}
 
 	data := url.Values{}
-	data.Set("client_id", oa.clientID)
-	data.Set("client_secret", oa.clientSecret)
-	data.Set("refresh_token", *((*oa.token).RefreshToken))
+	data.Set("client_id", service.clientID)
+	data.Set("client_secret", service.clientSecret)
+	data.Set("refresh_token", *((*service.token).RefreshToken))
 	data.Set("grant_type", "refresh_token")
 
-	return oa.getToken(&data)
+	return service.getToken(&data)
 }
 
 // ValidateToken validates current token and retrieves a new one if necessary
 //
-func (oa *OAuth2) ValidateToken() (*Token, *errortools.Error) {
-	oa.lockToken()
-	defer oa.unlockToken()
+func (service *Service) ValidateToken() (*Token, *errortools.Error) {
+	service.lockToken()
+	defer service.unlockToken()
 
-	if !oa.token.hasAccessToken() {
-		if oa.getTokenFunction != nil {
+	if !service.token.hasAccessToken() {
+		if service.getTokenFunction != nil {
 			// retrieve AccessCode from BigQuery
-			token, e := (*oa.getTokenFunction)()
+			token, e := (*service.getTokenFunction)()
 			if e != nil {
 				return nil, e
 			}
 
-			oa.token = token
+			service.token = token
 		}
 
-		/*e := oa.getTokenFromBigQuery()
+		/*e := service.getTokenFromBigQuery()
 		if e != nil {
 			return nil, e
 		}*/
 	}
 
 	// token should be valid at least one minute from now (te be sure)
-	atTimeUTC := time.Now().In(oa.locationUTC).Add(60 * time.Second)
+	atTimeUTC := time.Now().In(service.locationUTC).Add(60 * time.Second)
 
-	if oa.token.hasValidAccessToken(atTimeUTC) {
-		return oa.token, nil
+	if service.token.hasValidAccessToken(atTimeUTC) {
+		return service.token, nil
 	}
 
-	if oa.token.hasRefreshToken() {
-		e := oa.getTokenFromRefreshToken()
+	if service.token.hasRefreshToken() {
+		e := service.getTokenFromRefreshToken()
 		if e != nil {
 			return nil, e
 		}
 
-		if oa.token.hasValidAccessToken(atTimeUTC) {
-			return oa.token, nil
+		if service.token.hasValidAccessToken(atTimeUTC) {
+			return service.token, nil
 		}
 	}
 
-	if oa.newTokenFunction != nil {
-		e := oa.getNewTokenFromFunction()
+	if service.newTokenFunction != nil {
+		e := service.getNewTokenFromFunction()
 		if e != nil {
 			return nil, e
 		} else {
-			return oa.token, nil
+			return service.token, nil
 		}
 	}
 
-	return nil, oa.initTokenNeeded()
+	return nil, service.initTokenNeeded()
 }
 
-func (oa *OAuth2) initTokenNeeded() *errortools.Error {
-	message := fmt.Sprintf("No valid accesscode or refreshcode found. Please generate new token by running command:\noauth2_token.exe %s", oa.clientID)
+func (service *Service) initTokenNeeded() *errortools.Error {
+	message := fmt.Sprintf("No valid accesscode or refreshcode found. Please generate new token by running command:\noauth2_token.exe %s", service.clientID)
 	return errortools.ErrorMessage(message)
 }
 
-func (oa *OAuth2) InitToken() *errortools.Error {
-	if oa == nil {
-		return errortools.ErrorMessage("OAuth2 variable is nil pointer")
+func (service *Service) InitToken() *errortools.Error {
+	if service == nil {
+		return errortools.ErrorMessage("Service variable is nil pointer")
 	}
 
-	url2 := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", oa.authURL, oa.clientID, url.PathEscape(oa.redirectURL), url.PathEscape(oa.scope))
+	url2 := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", service.authURL, service.clientID, url.PathEscape(service.redirectURL), url.PathEscape(service.scope))
 
 	fmt.Println("Go to this url to get new access token:")
 	fmt.Println()
@@ -357,7 +349,7 @@ func (oa *OAuth2) InitToken() *errortools.Error {
 		}
 		code := r.FormValue("code")
 
-		ee := oa.getTokenFromCode(code)
+		ee := service.getTokenFromCode(code)
 		if ee != nil {
 			fmt.Println(ee.Message)
 		}
@@ -372,34 +364,38 @@ func (oa *OAuth2) InitToken() *errortools.Error {
 	return nil
 }
 
-func (oa *OAuth2) getNewTokenFromFunction() *errortools.Error {
+func (service *Service) getNewTokenFromFunction() *errortools.Error {
 	fmt.Println("***getNewTokenFromFunction***")
 
-	if oa.newTokenFunction == nil {
+	if service.newTokenFunction == nil {
 		return errortools.ErrorMessage("No NewTokenFunction defined.")
 	}
 
-	token, e := (*oa.newTokenFunction)()
+	token, e := (*service.newTokenFunction)()
 	if e != nil {
 		return e
 	}
 
-	e = oa.setToken(token)
+	e = service.setToken(token)
 	if e != nil {
 		return e
 	}
 
-	if oa.saveTokenFunction != nil {
-		e = (*oa.saveTokenFunction)(token)
+	if service.saveTokenFunction != nil {
+		e = (*service.saveTokenFunction)(token)
 		if e != nil {
 			return e
 		}
 	}
 	/*
-		ee = oa.saveTokenToBigQuery()
+		ee = service.saveTokenToBigQuery()
 		if ee != nil {
 			return ee
 		}*/
 
 	return nil
+}
+
+func (service *Service) APICallCount() int64 {
+	return service.apiCallCount
 }
