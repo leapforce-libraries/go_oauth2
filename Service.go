@@ -29,7 +29,6 @@ type Service struct {
 	token             *Token
 	locationUTC       *time.Location
 	httpService       *go_http.Service
-	apiCallCount      int64
 }
 
 type ServiceConfig struct {
@@ -455,9 +454,9 @@ func (service *Service) httpRequest(httpMethod string, requestConfig *go_http.Re
 }
 
 func (service *Service) APICallCount() int64 {
-	return service.apiCallCount
+	return service.httpService.RequestCount()
 }
 
 func (service Service) APIReset() {
-	service.apiCallCount = 0
+	service.httpService.ResetRequestCount()
 }
