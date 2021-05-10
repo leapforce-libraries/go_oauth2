@@ -396,6 +396,68 @@ func (service *Service) getNewTokenFromFunction() *errortools.Error {
 	return nil
 }
 
+// Get returns http.Response for generic oAuth2 Get http call
+//
+func (service *Service) Get(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return service.httpRequest(http.MethodGet, requestConfig, false)
+}
+
+// Post returns http.Response for generic oAuth2 Post http call
+//
+func (service *Service) Post(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return service.httpRequest(http.MethodPost, requestConfig, false)
+}
+
+// Put returns http.Response for generic oAuth2 Put http call
+//
+func (service *Service) Put(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return service.httpRequest(http.MethodPut, requestConfig, false)
+}
+
+// Patch returns http.Response for generic oAuth2 Patch http call
+//
+func (service *Service) Patch(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return service.httpRequest(http.MethodPatch, requestConfig, false)
+}
+
+// Delete returns http.Response for generic oAuth2 Delete http call
+//
+func (service *Service) Delete(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return service.httpRequest(http.MethodDelete, requestConfig, false)
+}
+
+// HTTPRequest returns http.Response for generic oAuth2 http call
+//
+func (service *Service) httpRequest(httpMethod string, requestConfig *go_http.RequestConfig, skipAccessToken bool) (*http.Request, *http.Response, *errortools.Error) {
+	// Authorization header
+	if !skipAccessToken {
+
+		_, e := service.ValidateToken()
+		if e != nil {
+			return nil, nil, e
+		}
+
+		if service.token == nil {
+			e.SetMessage("No Token.")
+			return nil, nil, e
+		}
+
+		if (*service.token).AccessToken == nil {
+			e.SetMessage("No AccessToken.")
+			return nil, nil, e
+		}
+
+		header := http.Header{}
+		header.Set("Authorization", fmt.Sprintf("Bearer %s", *((*service.token).AccessToken)))
+	}
+
+	return service.httpService.HTTPRequest(httpMethod, requestConfig)
+}
+
 func (service *Service) APICallCount() int64 {
 	return service.apiCallCount
+}
+
+func (service Service) APIReset() {
+	service.apiCallCount = 0
 }

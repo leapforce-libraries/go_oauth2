@@ -60,7 +60,7 @@ func (service *Service) GetAccessTokenFromCode(r *http.Request) *errortools.Erro
 		XWWWFormURLEncoded: &t,
 	}
 
-	_, response, e := service.httpService.HTTPRequest(service.tokenHTTPMethod, &requestConfig)
+	_, response, e := service.httpRequest(service.tokenHTTPMethod, &requestConfig, true)
 	if e != nil {
 		return e
 	}
