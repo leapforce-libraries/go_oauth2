@@ -428,7 +428,7 @@ func (service *Service) Delete(requestConfig *go_http.RequestConfig) (*http.Requ
 // HTTPRequest returns http.Response for generic oAuth2 http call
 //
 func (service *Service) HTTPRequest(httpMethod string, requestConfig *go_http.RequestConfig, skipAccessToken bool) (*http.Request, *http.Response, *errortools.Error) {
-	return service.httpRequest(httpMethod, requestConfig, false)
+	return service.httpRequest(httpMethod, requestConfig, skipAccessToken)
 }
 
 // httpRequest returns http.Response for generic oAuth2 http call
@@ -454,6 +454,7 @@ func (service *Service) httpRequest(httpMethod string, requestConfig *go_http.Re
 
 		header := http.Header{}
 		header.Set("Authorization", fmt.Sprintf("Bearer %s", *((*service.token).AccessToken)))
+		requestConfig.NonDefaultHeaders = &header
 	}
 
 	return service.httpService.HTTPRequest(httpMethod, requestConfig)
