@@ -333,8 +333,8 @@ func (service *Service) GetToken() *Token {
 	return service.token
 }
 
-func (service *Service) SetToken() *Token {
-	return service.token
+func (service *Service) SetToken(token *Token) {
+	service.token = token
 }
 
 func (service *Service) InitToken(scope string) *errortools.Error {
