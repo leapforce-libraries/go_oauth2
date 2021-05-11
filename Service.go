@@ -74,6 +74,14 @@ func NewService(serviceConfig *ServiceConfig) (*Service, *errortools.Error) {
 	}, nil
 }
 
+func (*Service) lockToken() {
+	tokenMutex.Lock()
+}
+
+func (*Service) unlockToken() {
+	tokenMutex.Unlock()
+}
+
 func (service *Service) getToken(params *url.Values) *errortools.Error {
 	request := new(http.Request)
 
@@ -319,6 +327,14 @@ func (service *Service) ValidateToken() (*Token, *errortools.Error) {
 func (service *Service) initTokenNeeded() *errortools.Error {
 	message := fmt.Sprintf("No valid accesscode or refreshcode found. Please generate new token by running command:\noauth2_token.exe %s", service.clientID)
 	return errortools.ErrorMessage(message)
+}
+
+func (service *Service) GetToken() *Token {
+	return service.token
+}
+
+func (service *Service) SetToken() *Token {
+	return service.token
 }
 
 func (service *Service) InitToken(scope string) *errortools.Error {

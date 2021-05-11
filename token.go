@@ -59,14 +59,6 @@ func (t *Token) Print() {
 	}
 }
 
-func (*Service) lockToken() {
-	tokenMutex.Lock()
-}
-
-func (*Service) unlockToken() {
-	tokenMutex.Unlock()
-}
-
 func (t *Token) hasAccessToken() bool {
 	if t == nil {
 		return false

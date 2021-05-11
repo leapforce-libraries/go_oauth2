@@ -73,5 +73,10 @@ func (service *Service) GetAccessTokenFromCode(r *http.Request) *errortools.Erro
 		return errortools.ErrorMessage("Response body is nil")
 	}
 
-	return errortools.ErrorMessage(token.AccessToken)
+	e = service.setToken(&token)
+	if e != nil {
+		return e
+	}
+
+	return nil
 }
