@@ -18,7 +18,6 @@ import (
 type Service struct {
 	clientID          string
 	clientSecret      string
-	scope             string
 	redirectURL       string
 	authURL           string
 	tokenURL          string
@@ -34,7 +33,6 @@ type Service struct {
 type ServiceConfig struct {
 	ClientID          string
 	ClientSecret      string
-	Scope             string
 	RedirectURL       string
 	AuthURL           string
 	TokenURL          string
@@ -64,7 +62,6 @@ func NewService(serviceConfig *ServiceConfig) (*Service, *errortools.Error) {
 	return &Service{
 		clientID:          serviceConfig.ClientID,
 		clientSecret:      serviceConfig.ClientSecret,
-		scope:             serviceConfig.Scope,
 		redirectURL:       serviceConfig.RedirectURL,
 		authURL:           serviceConfig.AuthURL,
 		tokenURL:          serviceConfig.TokenURL,
@@ -324,16 +321,14 @@ func (service *Service) initTokenNeeded() *errortools.Error {
 	return errortools.ErrorMessage(message)
 }
 
-func (service *Service) InitToken() *errortools.Error {
+func (service *Service) InitToken(scope string) *errortools.Error {
 	if service == nil {
 		return errortools.ErrorMessage("Service variable is nil pointer")
 	}
 
-	url2 := fmt.Sprintf("%s?client_id=%s&response_type=code&redirect_uri=%s&scope=%s&access_type=offline&prompt=consent", service.authURL, service.clientID, url.PathEscape(service.redirectURL), url.PathEscape(service.scope))
-
 	fmt.Println("Go to this url to get new access token:")
 	fmt.Println()
-	fmt.Println(url2)
+	fmt.Println(service.AuthorizeURL(scope))
 	fmt.Println()
 
 	// Create a new redirect route

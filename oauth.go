@@ -9,13 +9,14 @@ import (
 	go_http "github.com/leapforce-libraries/go_http"
 )
 
-func (service *Service) AuthorizeURL() string {
+func (service *Service) AuthorizeURL(scope string) string {
 	params := url.Values{}
 	params.Set("redirect_uri", service.redirectURL)
 	params.Set("client_id", service.clientID)
 	params.Set("response_type", "code")
-	params.Set("scope", service.scope)
+	params.Set("scope", scope)
 	params.Set("access_type", "offline")
+	//params.Set("prompt", "consent")
 	//if state != nil {
 	//	params.Set("state", *state)
 	//}
