@@ -7,6 +7,7 @@ import (
 	"time"
 
 	errortools "github.com/leapforce-libraries/go_errortools"
+	gcs "github.com/leapforce-libraries/go_googlecloudstorage"
 )
 
 var tokenMutex sync.Mutex
@@ -110,4 +111,61 @@ func (t *Token) isExpired() (bool, *errortools.Error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func GetTokenFromMap(m *gcs.Map) (*Token, *errortools.Error) {
+	if m == nil {
+		return nil, errortools.ErrorMessage("Map is nil pointer")
+	}
+
+	accessToken, _ := m.Get("access_token")
+	refreshToken, _ := m.Get("refresh_token")
+	tokenType, _ := m.Get("token_type")
+	scope, _ := m.Get("scope")
+	expiry, _ := m.GetTimestamp("expiry")
+
+	return &Token{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TokenType:    tokenType,
+		Scope:        scope,
+		Expiry:       expiry,
+	}, nil
+}
+
+func SaveTokenToMap(m *gcs.Map, token *Token) *errortools.Error {
+	if m == nil {
+		return errortools.ErrorMessage("Map is nil pointer")
+	}
+
+	if token == nil {
+		return errortools.ErrorMessage("Token is nil pointer")
+	}
+
+	if token.AccessToken != nil {
+		m.Set("access_token", *token.AccessToken, false)
+	}
+
+	if token.RefreshToken != nil {
+		m.Set("refresh_token", *token.RefreshToken, false)
+	}
+
+	if token.TokenType != nil {
+		m.Set("token_type", *token.TokenType, false)
+	}
+
+	if token.Scope != nil {
+		m.Set("scope", *token.Scope, false)
+	}
+
+	if token.Expiry != nil {
+		m.SetTimestamp("expiry", *token.Expiry, false)
+	}
+
+	e := m.Save()
+	if e != nil {
+		return e
+	}
+
+	return nil
 }
