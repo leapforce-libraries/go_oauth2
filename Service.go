@@ -325,8 +325,7 @@ func (service *Service) ValidateToken() (*Token, *errortools.Error) {
 }
 
 func (service *Service) initTokenNeeded() *errortools.Error {
-	message := fmt.Sprintf("No valid accesscode or refreshcode found. Please generate new token by running command:\noauth2_token.exe %s", service.clientID)
-	return errortools.ErrorMessage(message)
+	return errortools.ErrorMessage("No valid accesscode or refreshcode found. Please reconnect.")
 }
 
 func (service *Service) GetToken() *Token {
