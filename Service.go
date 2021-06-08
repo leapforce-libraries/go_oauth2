@@ -463,6 +463,9 @@ func (service *Service) httpRequest(httpMethod string, requestConfig *go_http.Re
 		}
 
 		header := http.Header{}
+		if requestConfig.NonDefaultHeaders != nil {
+			header = *requestConfig.NonDefaultHeaders
+		}
 		header.Set("Authorization", fmt.Sprintf("Bearer %s", *((*service.token).AccessToken)))
 		requestConfig.NonDefaultHeaders = &header
 	}
