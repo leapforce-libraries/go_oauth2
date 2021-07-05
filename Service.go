@@ -336,14 +336,14 @@ func (service *Service) SetToken(token *Token) {
 	service.token = token
 }
 
-func (service *Service) InitToken(scope string) *errortools.Error {
+func (service *Service) InitToken(scope string, accessType *string, prompt *string, state *string) *errortools.Error {
 	if service == nil {
 		return errortools.ErrorMessage("Service variable is nil pointer")
 	}
 
 	fmt.Println("Go to this url to get new access token:")
 	fmt.Println()
-	fmt.Println(service.AuthorizeURL(scope))
+	fmt.Println(service.AuthorizeURL(scope, accessType, prompt, state))
 	fmt.Println()
 
 	// Create a new redirect route

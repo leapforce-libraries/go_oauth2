@@ -9,17 +9,24 @@ import (
 	go_http "github.com/leapforce-libraries/go_http"
 )
 
-func (service *Service) AuthorizeURL(scope string) string {
+func (service *Service) AuthorizeURL(scope string, accessType *string, prompt *string, state *string) string {
 	params := url.Values{}
 	params.Set("redirect_uri", service.redirectURL)
 	params.Set("client_id", service.clientID)
 	params.Set("response_type", "code")
 	params.Set("scope", scope)
-	params.Set("access_type", "offline")
-	//params.Set("prompt", "consent")
-	//if state != nil {
-	//	params.Set("state", *state)
-	//}
+
+	if accessType != nil {
+		params.Set("access_type", *accessType)
+	}
+
+	if prompt != nil {
+		params.Set("prompt", *prompt)
+	}
+
+	if state != nil {
+		params.Set("state", *state)
+	}
 
 	return fmt.Sprintf("%s?%s", service.authURL, params.Encode())
 }
