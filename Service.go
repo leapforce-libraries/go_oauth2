@@ -358,14 +358,12 @@ func (service *Service) InitToken(scope string, accessType *string, prompt *stri
 		}
 		code := r.FormValue("code")
 
-		ee := service.getTokenFromCode(code)
-		if ee != nil {
-			fmt.Println(ee.Message)
+		e := service.getTokenFromCode(code)
+		if e != nil {
+			fmt.Println(e)
 		}
 
 		w.WriteHeader(http.StatusFound)
-
-		return
 	})
 
 	http.ListenAndServe(":8080", nil)
