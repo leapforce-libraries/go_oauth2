@@ -407,40 +407,14 @@ func (service *Service) getNewTokenFromFunction() *errortools.Error {
 	return nil
 }
 
-// Get returns http.Response for generic oAuth2 Get http call
-//
-func (service *Service) Get(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return service.httpRequest(http.MethodGet, requestConfig, false)
-}
-
-// Post returns http.Response for generic oAuth2 Post http call
-//
-func (service *Service) Post(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return service.httpRequest(http.MethodPost, requestConfig, false)
-}
-
-// Put returns http.Response for generic oAuth2 Put http call
-//
-func (service *Service) Put(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return service.httpRequest(http.MethodPut, requestConfig, false)
-}
-
-// Patch returns http.Response for generic oAuth2 Patch http call
-//
-func (service *Service) Patch(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return service.httpRequest(http.MethodPatch, requestConfig, false)
-}
-
-// Delete returns http.Response for generic oAuth2 Delete http call
-//
-func (service *Service) Delete(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return service.httpRequest(http.MethodDelete, requestConfig, false)
-}
-
 // HTTPRequest returns http.Response for generic oAuth2 http call
 //
-func (service *Service) HTTPRequest(httpMethod string, requestConfig *go_http.RequestConfig, skipAccessToken bool) (*http.Request, *http.Response, *errortools.Error) {
-	return service.httpRequest(httpMethod, requestConfig, skipAccessToken)
+func (service *Service) HTTPRequestWithout(httpMethod string, requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return service.httpRequest(httpMethod, requestConfig, false)
+}
+
+func (service *Service) HTTPRequestWithoutAccessToken(httpMethod string, requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return service.httpRequest(httpMethod, requestConfig, true)
 }
 
 // httpRequest returns http.Response for generic oAuth2 http call
