@@ -100,6 +100,7 @@ func (t *Token) hasRefreshToken() bool {
 	return true
 }
 
+/*
 func (t *Token) isExpired() (bool, *errortools.Error) {
 	if t == nil {
 		return true, errortools.ErrorMessage("Token is nil.")
@@ -111,7 +112,7 @@ func (t *Token) isExpired() (bool, *errortools.Error) {
 		return true, nil
 	}
 	return false, nil
-}
+}*/
 
 func GetTokenFromMap(m *gcs.Map) (*Token, *errortools.Error) {
 	if m == nil {

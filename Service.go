@@ -83,7 +83,7 @@ func (*Service) unlockToken() {
 }
 
 func (service *Service) getToken(params *url.Values) *errortools.Error {
-	request := new(http.Request)
+	var request *http.Request = nil
 
 	fmt.Println(service.tokenHTTPMethod)
 
@@ -146,6 +146,10 @@ func (service *Service) getToken(params *url.Values) *errortools.Error {
 	defer res.Body.Close()
 
 	b, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		e.SetMessage(err)
+		return e
+	}
 
 	if res.StatusCode < 200 || res.StatusCode > 299 {
 		eoError := ApiError{}
@@ -468,7 +472,7 @@ func (service *Service) httpRequest(httpMethod string, requestConfig *go_http.Re
 		requestConfig.NonDefaultHeaders = &header
 	}
 
-	return service.httpService.HTTPRequest(httpMethod, requestConfig)
+	return service.httpService.HTTPRequest(requestConfig)
 }
 
 func (service *Service) APICallCount() int64 {
