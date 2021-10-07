@@ -409,7 +409,7 @@ func (service *Service) getNewTokenFromFunction() *errortools.Error {
 
 // HTTPRequest returns http.Response for generic oAuth2 http call
 //
-func (service *Service) HTTPRequestWithout(httpMethod string, requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+func (service *Service) HTTPRequest(httpMethod string, requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
 	return service.httpRequest(httpMethod, requestConfig, false)
 }
 
