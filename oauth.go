@@ -61,6 +61,7 @@ func (service *Service) GetAccessTokenFromCode(r *http.Request) *errortools.Erro
 
 	t := true
 	requestConfig := go_http.RequestConfig{
+		Method:             service.tokenHTTPMethod,
 		URL:                service.tokenURL,
 		NonDefaultHeaders:  &header,
 		BodyModel:          body,
@@ -68,7 +69,7 @@ func (service *Service) GetAccessTokenFromCode(r *http.Request) *errortools.Erro
 		XWWWFormURLEncoded: &t,
 	}
 
-	_, response, e := service.httpRequest(service.tokenHTTPMethod, &requestConfig, true)
+	_, response, e := service.HTTPRequestWithoutAccessToken(&requestConfig)
 	if e != nil {
 		return e
 	}

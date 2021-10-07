@@ -409,17 +409,17 @@ func (service *Service) getNewTokenFromFunction() *errortools.Error {
 
 // HTTPRequest returns http.Response for generic oAuth2 http call
 //
-func (service *Service) HTTPRequest(httpMethod string, requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return service.httpRequest(httpMethod, requestConfig, false)
+func (service *Service) HTTPRequest(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return service.httpRequest(requestConfig, false)
 }
 
-func (service *Service) HTTPRequestWithoutAccessToken(httpMethod string, requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
-	return service.httpRequest(httpMethod, requestConfig, true)
+func (service *Service) HTTPRequestWithoutAccessToken(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+	return service.httpRequest(requestConfig, true)
 }
 
 // httpRequest returns http.Response for generic oAuth2 http call
 //
-func (service *Service) httpRequest(httpMethod string, requestConfig *go_http.RequestConfig, skipAccessToken bool) (*http.Request, *http.Response, *errortools.Error) {
+func (service *Service) httpRequest(requestConfig *go_http.RequestConfig, skipAccessToken bool) (*http.Request, *http.Response, *errortools.Error) {
 	// Authorization header
 	if !skipAccessToken {
 
