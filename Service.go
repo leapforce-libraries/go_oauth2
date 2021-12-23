@@ -193,12 +193,6 @@ func (service *Service) getToken(params *url.Values) *errortools.Error {
 		}
 	}
 
-	/*
-		ee = service.saveTokenToBigQuery()
-		if ee != nil {
-			return ee
-		}*/
-
 	return nil
 }
 
@@ -251,7 +245,7 @@ func (service *Service) getTokenFromRefreshToken() *errortools.Error {
 
 	//always get refresh token from BQ prior to using it
 	if service.getTokenFunction != nil {
-		// retrieve AccessCode from BigQuery
+		// retrieve AccessCode from source
 		token, e := (*service.getTokenFunction)()
 		if e != nil {
 			return e
@@ -283,7 +277,7 @@ func (service *Service) ValidateToken() (*Token, *errortools.Error) {
 
 	if !service.token.hasAccessToken() {
 		if service.getTokenFunction != nil {
-			// retrieve AccessCode from BigQuery
+			// retrieve AccessCode from source
 			token, e := (*service.getTokenFunction)()
 			if e != nil {
 				return nil, e
@@ -291,11 +285,6 @@ func (service *Service) ValidateToken() (*Token, *errortools.Error) {
 
 			service.token = token
 		}
-
-		/*e := service.getTokenFromBigQuery()
-		if e != nil {
-			return nil, e
-		}*/
 	}
 
 	// token should be valid at least one minute from now (te be sure)
@@ -398,11 +387,6 @@ func (service *Service) getNewTokenFromFunction() *errortools.Error {
 			return e
 		}
 	}
-	/*
-		ee = service.saveTokenToBigQuery()
-		if ee != nil {
-			return ee
-		}*/
 
 	return nil
 }
