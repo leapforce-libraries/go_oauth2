@@ -21,6 +21,7 @@ type Service struct {
 	authURL           string
 	tokenURL          string
 	tokenHTTPMethod   string
+	refreshMargin     time.Duration // refresh at earliest {RefreshMargin} before expiry
 	getTokenFunction  *func() (*Token, *errortools.Error)
 	newTokenFunction  *func() (*Token, *errortools.Error)
 	saveTokenFunction *func(token *Token) *errortools.Error
@@ -36,6 +37,7 @@ type ServiceConfig struct {
 	AuthURL           string
 	TokenURL          string
 	TokenHTTPMethod   string
+	RefreshMargin     *int
 	GetTokenFunction  *func() (*Token, *errortools.Error)
 	NewTokenFunction  *func() (*Token, *errortools.Error)
 	SaveTokenFunction *func(token *Token) *errortools.Error
@@ -58,12 +60,18 @@ func NewService(serviceConfig *ServiceConfig) (*Service, *errortools.Error) {
 		return nil, e
 	}
 
+	refreshMargin := 60 * time.Second
+	if serviceConfig.RefreshMargin != nil {
+		refreshMargin = time.Duration(*serviceConfig.RefreshMargin) * time.Millisecond
+	}
+
 	return &Service{
 		clientID:          serviceConfig.ClientID,
 		clientSecret:      serviceConfig.ClientSecret,
 		redirectURL:       serviceConfig.RedirectURL,
 		authURL:           serviceConfig.AuthURL,
 		tokenURL:          serviceConfig.TokenURL,
+		refreshMargin:     refreshMargin,
 		tokenHTTPMethod:   serviceConfig.TokenHTTPMethod,
 		getTokenFunction:  serviceConfig.GetTokenFunction,
 		newTokenFunction:  serviceConfig.NewTokenFunction,
@@ -287,7 +295,7 @@ func (service *Service) ValidateToken() (*Token, *errortools.Error) {
 	}
 
 	// token should be valid at least one minute from now (te be sure)
-	atTimeUTC := time.Now().In(service.locationUTC).Add(60 * time.Second)
+	atTimeUTC := time.Now().In(service.locationUTC).Add(service.refreshMargin)
 
 	if service.token.hasValidAccessToken(atTimeUTC) {
 		return service.token, nil
