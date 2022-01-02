@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -223,7 +222,13 @@ func (service *Service) setToken(token *Token) *errortools.Error {
 	return nil
 }
 
-func (service *Service) GetTokenFromCode(code string) *errortools.Error {
+func (service *Service) GetTokenFromCode(r *http.Request) *errortools.Error {
+	err := r.ParseForm()
+	if err != nil {
+		return errortools.ErrorMessage(err)
+	}
+	code := r.FormValue("code")
+
 	data := url.Values{}
 	data.Set("client_id", service.clientID)
 	data.Set("client_secret", service.clientSecret)
@@ -360,16 +365,11 @@ func (service *Service) InitToken(scope string, accessType *string, prompt *stri
 		//
 		// get authorization code
 		//
-		err := r.ParseForm()
-		if err != nil {
-			fmt.Fprintf(os.Stdout, "could not parse query: %v", err)
-			w.WriteHeader(http.StatusBadRequest)
-		}
-		code := r.FormValue("code")
-
-		e := service.GetTokenFromCode(code)
+		e := service.GetTokenFromCode(r)
 		if e != nil {
-			fmt.Println(e)
+			errortools.CaptureError(e)
+			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
 
 		w.WriteHeader(http.StatusFound)
