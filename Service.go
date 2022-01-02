@@ -85,8 +85,6 @@ func (*Service) unlockToken() {
 func (service *Service) getToken(params *url.Values) *errortools.Error {
 	var request *http.Request = nil
 
-	fmt.Println(service.tokenHTTPMethod)
-
 	e := new(errortools.Error)
 
 	if service.tokenHTTPMethod == http.MethodGet {
@@ -160,15 +158,11 @@ func (service *Service) getToken(params *url.Values) *errortools.Error {
 			return e
 		}
 
-		//message := fmt.Sprintln("Error:", res.StatusCode, eoError.Error, ", ", eoError.Description)
-		//fmt.Println(message)
-
-		service.token.Print()
-
 		if res.StatusCode == 401 {
 			return service.initTokenNeeded()
 		}
 
+		fmt.Printf("ResponseBody: %s\n", string(b))
 		e.SetMessage(fmt.Sprintf("Server returned statuscode %v, url: %s", res.StatusCode, request.URL))
 		return e
 	}
@@ -329,6 +323,28 @@ func (service *Service) SetToken(token *Token) {
 	service.token = token
 }
 
+func (service *Service) authorizeURL(scope string, accessType *string, prompt *string, state *string) string {
+	params := url.Values{}
+	params.Set("redirect_uri", service.redirectURL)
+	params.Set("client_id", service.clientID)
+	params.Set("response_type", "code")
+	params.Set("scope", scope)
+
+	if accessType != nil {
+		params.Set("access_type", *accessType)
+	}
+
+	if prompt != nil {
+		params.Set("prompt", *prompt)
+	}
+
+	if state != nil {
+		params.Set("state", *state)
+	}
+
+	return fmt.Sprintf("%s?%s", service.authURL, params.Encode())
+}
+
 func (service *Service) InitToken(scope string, accessType *string, prompt *string, state *string) *errortools.Error {
 	if service == nil {
 		return errortools.ErrorMessage("Service variable is nil pointer")
@@ -336,7 +352,7 @@ func (service *Service) InitToken(scope string, accessType *string, prompt *stri
 
 	fmt.Println("Go to this url to get new access token:")
 	fmt.Println()
-	fmt.Println(service.AuthorizeURL(scope, accessType, prompt, state))
+	fmt.Println(service.authorizeURL(scope, accessType, prompt, state))
 	fmt.Println()
 
 	// Create a new redirect route
