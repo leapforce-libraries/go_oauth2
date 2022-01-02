@@ -223,7 +223,7 @@ func (service *Service) setToken(token *Token) *errortools.Error {
 	return nil
 }
 
-func (service *Service) getTokenFromCode(code string) *errortools.Error {
+func (service *Service) GetTokenFromCode(code string) *errortools.Error {
 	data := url.Values{}
 	data.Set("client_id", service.clientID)
 	data.Set("client_secret", service.clientSecret)
@@ -367,7 +367,7 @@ func (service *Service) InitToken(scope string, accessType *string, prompt *stri
 		}
 		code := r.FormValue("code")
 
-		e := service.getTokenFromCode(code)
+		e := service.GetTokenFromCode(code)
 		if e != nil {
 			fmt.Println(e)
 		}
