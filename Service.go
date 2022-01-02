@@ -14,6 +14,8 @@ import (
 	go_http "github.com/leapforce-libraries/go_http"
 )
 
+const defaultRefreshMargin time.Duration = time.Minute
+
 type Service struct {
 	clientID          string
 	clientSecret      string
@@ -37,7 +39,7 @@ type ServiceConfig struct {
 	AuthURL           string
 	TokenURL          string
 	TokenHTTPMethod   string
-	RefreshMargin     *int
+	RefreshMargin     *time.Duration
 	GetTokenFunction  *func() (*Token, *errortools.Error)
 	NewTokenFunction  *func() (*Token, *errortools.Error)
 	SaveTokenFunction *func(token *Token) *errortools.Error
@@ -60,9 +62,9 @@ func NewService(serviceConfig *ServiceConfig) (*Service, *errortools.Error) {
 		return nil, e
 	}
 
-	refreshMargin := 60 * time.Second
+	refreshMargin := defaultRefreshMargin
 	if serviceConfig.RefreshMargin != nil {
-		refreshMargin = time.Duration(*serviceConfig.RefreshMargin) * time.Millisecond
+		refreshMargin = *serviceConfig.RefreshMargin
 	}
 
 	return &Service{
