@@ -17,32 +17,34 @@ import (
 const defaultRefreshMargin time.Duration = time.Minute
 
 type Service struct {
-	clientID          string
-	clientSecret      string
-	redirectURL       string
-	authURL           string
-	tokenURL          string
-	tokenHTTPMethod   string
-	refreshMargin     time.Duration // refresh at earliest {RefreshMargin} before expiry
-	getTokenFunction  *func() (*Token, *errortools.Error)
-	newTokenFunction  *func() (*Token, *errortools.Error)
-	saveTokenFunction *func(token *Token) *errortools.Error
-	token             *Token
-	locationUTC       *time.Location
-	httpService       *go_http.Service
+	clientID        string
+	clientSecret    string
+	redirectURL     string
+	authURL         string
+	tokenURL        string
+	tokenHTTPMethod string
+	refreshMargin   time.Duration // refresh at earliest {RefreshMargin} before expiry
+	tokenSource     TokenSource
+	//getTokenFunction  *func() (*Token, *errortools.Error)
+	//newTokenFunction  *func() (*Token, *errortools.Error)
+	//saveTokenFunction *func(token *Token) *errortools.Error
+	//token       *Token
+	locationUTC *time.Location
+	httpService *go_http.Service
 }
 
 type ServiceConfig struct {
-	ClientID          string
-	ClientSecret      string
-	RedirectURL       string
-	AuthURL           string
-	TokenURL          string
-	TokenHTTPMethod   string
-	RefreshMargin     *time.Duration
-	GetTokenFunction  *func() (*Token, *errortools.Error)
-	NewTokenFunction  *func() (*Token, *errortools.Error)
-	SaveTokenFunction *func(token *Token) *errortools.Error
+	ClientID        string
+	ClientSecret    string
+	RedirectURL     string
+	AuthURL         string
+	TokenURL        string
+	TokenHTTPMethod string
+	RefreshMargin   *time.Duration
+	TokenSource     TokenSource
+	//GetTokenFunction  *func() (*Token, *errortools.Error)
+	//NewTokenFunction  *func() (*Token, *errortools.Error)
+	//SaveTokenFunction *func(token *Token) *errortools.Error
 }
 
 type ApiError struct {
@@ -68,18 +70,19 @@ func NewService(serviceConfig *ServiceConfig) (*Service, *errortools.Error) {
 	}
 
 	return &Service{
-		clientID:          serviceConfig.ClientID,
-		clientSecret:      serviceConfig.ClientSecret,
-		redirectURL:       serviceConfig.RedirectURL,
-		authURL:           serviceConfig.AuthURL,
-		tokenURL:          serviceConfig.TokenURL,
-		refreshMargin:     refreshMargin,
-		tokenHTTPMethod:   serviceConfig.TokenHTTPMethod,
-		getTokenFunction:  serviceConfig.GetTokenFunction,
-		newTokenFunction:  serviceConfig.NewTokenFunction,
-		saveTokenFunction: serviceConfig.SaveTokenFunction,
-		locationUTC:       locUTC,
-		httpService:       httpService,
+		clientID:        serviceConfig.ClientID,
+		clientSecret:    serviceConfig.ClientSecret,
+		redirectURL:     serviceConfig.RedirectURL,
+		authURL:         serviceConfig.AuthURL,
+		tokenURL:        serviceConfig.TokenURL,
+		refreshMargin:   refreshMargin,
+		tokenHTTPMethod: serviceConfig.TokenHTTPMethod,
+		tokenSource:     serviceConfig.TokenSource,
+		//getTokenFunction:  serviceConfig.GetTokenFunction,
+		//newTokenFunction:  serviceConfig.NewTokenFunction,
+		//saveTokenFunction: serviceConfig.SaveTokenFunction,
+		locationUTC: locUTC,
+		httpService: httpService,
 	}, nil
 }
 
@@ -184,21 +187,15 @@ func (service *Service) getToken(params *url.Values) *errortools.Error {
 		return e
 	}
 
-	e = service.setToken(&token)
+	e = service.tokenSource.SetToken(&token, true)
 	if e != nil {
 		return e
-	}
-
-	if service.saveTokenFunction != nil {
-		e = (*service.saveTokenFunction)(&token)
-		if e != nil {
-			return e
-		}
 	}
 
 	return nil
 }
 
+/*
 func (service *Service) setToken(token *Token) *errortools.Error {
 	if token != nil {
 		if token.ExpiresIn != nil {
@@ -230,7 +227,7 @@ func (service *Service) setToken(token *Token) *errortools.Error {
 	service.token = token
 
 	return nil
-}
+}*/
 
 func (service *Service) GetTokenFromCode(r *http.Request) *errortools.Error {
 	err := r.ParseForm()
@@ -250,29 +247,21 @@ func (service *Service) GetTokenFromCode(r *http.Request) *errortools.Error {
 }
 
 func (service *Service) getTokenFromRefreshToken() *errortools.Error {
-	fmt.Println("***getTokenFromRefreshToken***")
-
-	//always get refresh token from BQ prior to using it
-	if service.getTokenFunction != nil {
-		// retrieve AccessCode from source
-		token, e := (*service.getTokenFunction)()
-		if e != nil {
-			return e
-		}
-
-		service.token = token
-
-		service.token.Print()
+	e := service.tokenSource.RetrieveToken()
+	if e != nil {
+		return e
 	}
 
-	if !service.token.hasRefreshToken() {
+	service.tokenSource.Token().Print()
+
+	if !service.tokenSource.Token().hasRefreshToken() {
 		return service.initTokenNeeded()
 	}
 
 	data := url.Values{}
 	data.Set("client_id", service.clientID)
 	data.Set("client_secret", service.clientSecret)
-	data.Set("refresh_token", *((*service.token).RefreshToken))
+	data.Set("refresh_token", *(*service.tokenSource.Token()).RefreshToken)
 	data.Set("grant_type", "refresh_token")
 
 	return service.getToken(&data)
@@ -284,59 +273,104 @@ func (service *Service) ValidateToken() (*Token, *errortools.Error) {
 	service.lockToken()
 	defer service.unlockToken()
 
-	if !service.token.hasAccessToken() {
-		if service.getTokenFunction != nil {
-			// retrieve AccessCode from source
-			token, e := (*service.getTokenFunction)()
-			if e != nil {
-				return nil, e
-			}
+	if service.tokenSource.Token() == nil {
+		e := service.tokenSource.RetrieveToken()
+		if e != nil {
+			return nil, e
+		}
 
-			service.token = token
+		if service.tokenSource.Token() == nil {
+			return nil, errortools.ErrorMessage("Unable to retrieve token")
+		}
+	}
+
+	if !service.tokenSource.Token().hasAccessToken() {
+		e := service.tokenSource.RetrieveToken()
+		if e != nil {
+			return nil, e
+		}
+
+		if !service.tokenSource.Token().hasAccessToken() {
+			return nil, errortools.ErrorMessage("Token has no accesscode")
 		}
 	}
 
 	// token should be valid at least one minute from now (te be sure)
 	atTimeUTC := time.Now().In(service.locationUTC).Add(service.refreshMargin)
 
-	if service.token.hasValidAccessToken(atTimeUTC) {
-		return service.token, nil
+	if service.tokenSource.Token().hasValidAccessToken(atTimeUTC) {
+		return service.tokenSource.Token(), nil
 	}
 
-	if service.token.hasRefreshToken() {
+	if service.tokenSource.Token().hasRefreshToken() {
 		e := service.getTokenFromRefreshToken()
 		if e != nil {
 			return nil, e
 		}
 
-		if service.token.hasValidAccessToken(atTimeUTC) {
-			return service.token, nil
+		if service.tokenSource.Token().hasValidAccessToken(atTimeUTC) {
+			return service.tokenSource.Token(), nil
 		}
 	}
 
-	if service.newTokenFunction != nil {
-		e := service.getNewTokenFromFunction()
-		if e != nil {
-			return nil, e
-		} else {
-			return service.token, nil
-		}
+	token, e := service.tokenSource.NewToken()
+	if e != nil {
+		return nil, e
+	}
+	if token == nil {
+		return nil, service.initTokenNeeded()
 	}
 
-	return nil, service.initTokenNeeded()
+	if token.ExpiresIn != nil {
+		var expiresInInt int64
+		var expiresInString string
+		err := json.Unmarshal(*token.ExpiresIn, &expiresInInt)
+		if err != nil {
+			err = json.Unmarshal(*token.ExpiresIn, &expiresInString)
+
+			if err == nil {
+				expiresInInt, err = strconv.ParseInt(expiresInString, 10, 64)
+			}
+		}
+
+		if err != nil {
+			return nil, errortools.ErrorMessage(fmt.Sprintf("Cannot convert ExpiresIn %s to Int64.", fmt.Sprintf("%v", *token.ExpiresIn)))
+		}
+
+		//convert to UTC
+		expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(service.locationUTC)
+		token.Expiry = &expiry
+	} else {
+		token.Expiry = nil
+	}
+
+	token.Print()
+
+	e = service.tokenSource.SetToken(token, true)
+	if e != nil {
+		return nil, e
+	}
+
+	e = service.tokenSource.SaveToken()
+	if e != nil {
+		return nil, e
+	}
+
+	return service.tokenSource.Token(), nil
 }
 
 func (service *Service) initTokenNeeded() *errortools.Error {
 	return errortools.ErrorMessage("No valid accesscode or refreshcode found. Please reconnect.")
 }
 
+/*
 func (service *Service) GetToken() *Token {
 	return service.token
 }
 
 func (service *Service) SetToken(token *Token) {
 	service.token = token
-}
+}*/
 
 func (service *Service) authorizeURL(scope string, accessType *string, prompt *string, state *string) string {
 	params := url.Values{}
@@ -390,32 +424,52 @@ func (service *Service) InitToken(scope string, accessType *string, prompt *stri
 	return nil
 }
 
+/*
 func (service *Service) getNewTokenFromFunction() *errortools.Error {
-	fmt.Println("***getNewTokenFromFunction***")
-
-	if service.newTokenFunction == nil {
-		return errortools.ErrorMessage("No NewTokenFunction defined.")
-	}
-
-	token, e := (*service.newTokenFunction)()
+	token, e := service.tokenSource.NewToken()
 	if e != nil {
 		return e
 	}
 
-	e = service.setToken(token)
-	if e != nil {
-		return e
-	}
+	if token != nil {
+		if token.ExpiresIn != nil {
+			var expiresInInt int64
+			var expiresInString string
+			err := json.Unmarshal(*token.ExpiresIn, &expiresInInt)
+			if err != nil {
+				err = json.Unmarshal(*token.ExpiresIn, &expiresInString)
 
-	if service.saveTokenFunction != nil {
-		e = (*service.saveTokenFunction)(token)
-		if e != nil {
-			return e
+				if err == nil {
+					expiresInInt, err = strconv.ParseInt(expiresInString, 10, 64)
+				}
+			}
+
+			if err != nil {
+				return errortools.ErrorMessage(fmt.Sprintf("Cannot convert ExpiresIn %s to Int64.", fmt.Sprintf("%v", *token.ExpiresIn)))
+			}
+
+			//convert to UTC
+			expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(service.locationUTC)
+			token.Expiry = &expiry
+		} else {
+			token.Expiry = nil
 		}
 	}
 
+	token.Print()
+
+	e = service.tokenSource.SetToken(token)
+	if e != nil {
+		return e
+	}
+
+	e = service.tokenSource.SaveToken()
+	if e != nil {
+		return e
+	}
+
 	return nil
-}
+}*/
 
 // HTTPRequest returns http.Response for generic oAuth2 http call
 //
@@ -437,22 +491,22 @@ func (service *Service) httpRequest(requestConfig *go_http.RequestConfig, skipAc
 		if e != nil {
 			return nil, nil, e
 		}
+		/*
+			if service.tokenSource.Token() == nil {
+				e.SetMessage("No Token.")
+				return nil, nil, e
+			}
 
-		if service.token == nil {
-			e.SetMessage("No Token.")
-			return nil, nil, e
-		}
-
-		if (*service.token).AccessToken == nil {
-			e.SetMessage("No AccessToken.")
-			return nil, nil, e
-		}
+			if (*service.tokenSource.Token()).AccessToken == nil {
+				e.SetMessage("No AccessToken.")
+				return nil, nil, e
+			}*/
 
 		header := http.Header{}
 		if requestConfig.NonDefaultHeaders != nil {
 			header = *requestConfig.NonDefaultHeaders
 		}
-		header.Set("Authorization", fmt.Sprintf("Bearer %s", *((*service.token).AccessToken)))
+		header.Set("Authorization", fmt.Sprintf("Bearer %s", *(service.tokenSource.Token().AccessToken)))
 		requestConfig.NonDefaultHeaders = &header
 	}
 
