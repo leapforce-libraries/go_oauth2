@@ -24,8 +24,10 @@ func (m *TokenMap) Token() *Token {
 	return m.token
 }
 
-func (m *TokenMap) NewToken() (*Token, *errortools.Error) {
-	return nil, nil
+func (m *TokenMap) NewToken() *errortools.Error {
+	m.token = nil
+
+	return nil
 }
 
 func (m *TokenMap) SetToken(token *Token, save bool) *errortools.Error {
@@ -38,7 +40,7 @@ func (m *TokenMap) SetToken(token *Token, save bool) *errortools.Error {
 	return m.SaveToken()
 }
 
-func (m *TokenMap) RetrieveToken() (*errortools.Error) {
+func (m *TokenMap) RetrieveToken() *errortools.Error {
 	accessToken, _ := m.map_.Get("access_token")
 	refreshToken, _ := m.map_.Get("refresh_token")
 	tokenType, _ := m.map_.Get("token_type")
@@ -52,7 +54,7 @@ func (m *TokenMap) RetrieveToken() (*errortools.Error) {
 		Scope:        scope,
 		Expiry:       expiry,
 	}
-	
+
 	return nil
 }
 

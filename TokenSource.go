@@ -6,7 +6,7 @@ import (
 
 type TokenSource interface {
 	Token() *Token
-	NewToken() (*Token, *errortools.Error)
+	NewToken() *errortools.Error
 	SetToken(*Token, bool) *errortools.Error
 	RetrieveToken() *errortools.Error
 	SaveToken() *errortools.Error

@@ -42,9 +42,6 @@ type ServiceConfig struct {
 	TokenHTTPMethod string
 	RefreshMargin   *time.Duration
 	TokenSource     TokenSource
-	//GetTokenFunction  *func() (*Token, *errortools.Error)
-	//NewTokenFunction  *func() (*Token, *errortools.Error)
-	//SaveTokenFunction *func(token *Token) *errortools.Error
 }
 
 type ApiError struct {
@@ -78,11 +75,8 @@ func NewService(serviceConfig *ServiceConfig) (*Service, *errortools.Error) {
 		refreshMargin:   refreshMargin,
 		tokenHTTPMethod: serviceConfig.TokenHTTPMethod,
 		tokenSource:     serviceConfig.TokenSource,
-		//getTokenFunction:  serviceConfig.GetTokenFunction,
-		//newTokenFunction:  serviceConfig.NewTokenFunction,
-		//saveTokenFunction: serviceConfig.SaveTokenFunction,
-		locationUTC: locUTC,
-		httpService: httpService,
+		locationUTC:     locUTC,
+		httpService:     httpService,
 	}, nil
 }
 
@@ -195,40 +189,6 @@ func (service *Service) getToken(params *url.Values) *errortools.Error {
 	return nil
 }
 
-/*
-func (service *Service) setToken(token *Token) *errortools.Error {
-	if token != nil {
-		if token.ExpiresIn != nil {
-			var expiresInInt int64
-			var expiresInString string
-			err := json.Unmarshal(*token.ExpiresIn, &expiresInInt)
-			if err != nil {
-				err = json.Unmarshal(*token.ExpiresIn, &expiresInString)
-
-				if err == nil {
-					expiresInInt, err = strconv.ParseInt(expiresInString, 10, 64)
-				}
-			}
-
-			if err != nil {
-				return errortools.ErrorMessage(fmt.Sprintf("Cannot convert ExpiresIn %s to Int64.", fmt.Sprintf("%v", *token.ExpiresIn)))
-			}
-
-			//convert to UTC
-			expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(service.locationUTC)
-			token.Expiry = &expiry
-		} else {
-			token.Expiry = nil
-		}
-	}
-
-	token.Print()
-
-	service.token = token
-
-	return nil
-}*/
-
 func (service *Service) GetTokenFromCode(r *http.Request) *errortools.Error {
 	err := r.ParseForm()
 	if err != nil {
@@ -246,27 +206,6 @@ func (service *Service) GetTokenFromCode(r *http.Request) *errortools.Error {
 	return service.getToken(&data)
 }
 
-func (service *Service) getTokenFromRefreshToken() *errortools.Error {
-	e := service.tokenSource.RetrieveToken()
-	if e != nil {
-		return e
-	}
-
-	service.tokenSource.Token().Print()
-
-	if !service.tokenSource.Token().hasRefreshToken() {
-		return service.initTokenNeeded()
-	}
-
-	data := url.Values{}
-	data.Set("client_id", service.clientID)
-	data.Set("client_secret", service.clientSecret)
-	data.Set("refresh_token", *(*service.tokenSource.Token()).RefreshToken)
-	data.Set("grant_type", "refresh_token")
-
-	return service.getToken(&data)
-}
-
 // ValidateToken validates current token and retrieves a new one if necessary
 //
 func (service *Service) ValidateToken() (*Token, *errortools.Error) {
@@ -274,6 +213,7 @@ func (service *Service) ValidateToken() (*Token, *errortools.Error) {
 	defer service.unlockToken()
 
 	if service.tokenSource.Token() == nil {
+		// retrieve used token
 		e := service.tokenSource.RetrieveToken()
 		if e != nil {
 			return nil, e
@@ -284,13 +224,61 @@ func (service *Service) ValidateToken() (*Token, *errortools.Error) {
 		}
 	}
 
+	if service.tokenSource.Token() == nil {
+		// retrieve new token from source
+		e := service.tokenSource.NewToken()
+		if e != nil {
+			return nil, e
+		}
+
+		token := service.tokenSource.Token()
+
+		if token.ExpiresIn != nil {
+			var expiresInInt int64
+			var expiresInString string
+			err := json.Unmarshal(*token.ExpiresIn, &expiresInInt)
+			if err != nil {
+				err = json.Unmarshal(*token.ExpiresIn, &expiresInString)
+
+				if err == nil {
+					expiresInInt, err = strconv.ParseInt(expiresInString, 10, 64)
+				}
+			}
+
+			if err != nil {
+				return nil, errortools.ErrorMessage(fmt.Sprintf("Cannot convert ExpiresIn %s to Int64.", fmt.Sprintf("%v", *token.ExpiresIn)))
+			}
+
+			//convert to UTC
+			expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(service.locationUTC)
+			token.Expiry = &expiry
+		} else {
+			token.Expiry = nil
+		}
+
+		token.Print()
+
+		e = service.tokenSource.SetToken(token, true)
+		if e != nil {
+			return nil, e
+		}
+	}
+
+	if service.tokenSource.Token() == nil {
+		// stop if no token found
+		return nil, service.initTokenNeeded()
+	}
+
+	// check existence of accesstoken
 	if !service.tokenSource.Token().hasAccessToken() {
+		// re-retrieve used token
 		e := service.tokenSource.RetrieveToken()
 		if e != nil {
 			return nil, e
 		}
 
 		if !service.tokenSource.Token().hasAccessToken() {
+			// stop if no access token found
 			return nil, errortools.ErrorMessage("Token has no accesscode")
 		}
 	}
@@ -303,7 +291,14 @@ func (service *Service) ValidateToken() (*Token, *errortools.Error) {
 	}
 
 	if service.tokenSource.Token().hasRefreshToken() {
-		e := service.getTokenFromRefreshToken()
+		// refresh access token
+		data := url.Values{}
+		data.Set("client_id", service.clientID)
+		data.Set("client_secret", service.clientSecret)
+		data.Set("refresh_token", *(*service.tokenSource.Token()).RefreshToken)
+		data.Set("grant_type", "refresh_token")
+
+		e := service.getToken(&data)
 		if e != nil {
 			return nil, e
 		}
@@ -313,64 +308,12 @@ func (service *Service) ValidateToken() (*Token, *errortools.Error) {
 		}
 	}
 
-	token, e := service.tokenSource.NewToken()
-	if e != nil {
-		return nil, e
-	}
-	if token == nil {
-		return nil, service.initTokenNeeded()
-	}
-
-	if token.ExpiresIn != nil {
-		var expiresInInt int64
-		var expiresInString string
-		err := json.Unmarshal(*token.ExpiresIn, &expiresInInt)
-		if err != nil {
-			err = json.Unmarshal(*token.ExpiresIn, &expiresInString)
-
-			if err == nil {
-				expiresInInt, err = strconv.ParseInt(expiresInString, 10, 64)
-			}
-		}
-
-		if err != nil {
-			return nil, errortools.ErrorMessage(fmt.Sprintf("Cannot convert ExpiresIn %s to Int64.", fmt.Sprintf("%v", *token.ExpiresIn)))
-		}
-
-		//convert to UTC
-		expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(service.locationUTC)
-		token.Expiry = &expiry
-	} else {
-		token.Expiry = nil
-	}
-
-	token.Print()
-
-	e = service.tokenSource.SetToken(token, true)
-	if e != nil {
-		return nil, e
-	}
-
-	e = service.tokenSource.SaveToken()
-	if e != nil {
-		return nil, e
-	}
-
 	return service.tokenSource.Token(), nil
 }
 
 func (service *Service) initTokenNeeded() *errortools.Error {
 	return errortools.ErrorMessage("No valid accesscode or refreshcode found. Please reconnect.")
 }
-
-/*
-func (service *Service) GetToken() *Token {
-	return service.token
-}
-
-func (service *Service) SetToken(token *Token) {
-	service.token = token
-}*/
 
 func (service *Service) authorizeURL(scope string, accessType *string, prompt *string, state *string) string {
 	params := url.Values{}
@@ -424,53 +367,6 @@ func (service *Service) InitToken(scope string, accessType *string, prompt *stri
 	return nil
 }
 
-/*
-func (service *Service) getNewTokenFromFunction() *errortools.Error {
-	token, e := service.tokenSource.NewToken()
-	if e != nil {
-		return e
-	}
-
-	if token != nil {
-		if token.ExpiresIn != nil {
-			var expiresInInt int64
-			var expiresInString string
-			err := json.Unmarshal(*token.ExpiresIn, &expiresInInt)
-			if err != nil {
-				err = json.Unmarshal(*token.ExpiresIn, &expiresInString)
-
-				if err == nil {
-					expiresInInt, err = strconv.ParseInt(expiresInString, 10, 64)
-				}
-			}
-
-			if err != nil {
-				return errortools.ErrorMessage(fmt.Sprintf("Cannot convert ExpiresIn %s to Int64.", fmt.Sprintf("%v", *token.ExpiresIn)))
-			}
-
-			//convert to UTC
-			expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(service.locationUTC)
-			token.Expiry = &expiry
-		} else {
-			token.Expiry = nil
-		}
-	}
-
-	token.Print()
-
-	e = service.tokenSource.SetToken(token)
-	if e != nil {
-		return e
-	}
-
-	e = service.tokenSource.SaveToken()
-	if e != nil {
-		return e
-	}
-
-	return nil
-}*/
-
 // HTTPRequest returns http.Response for generic oAuth2 http call
 //
 func (service *Service) HTTPRequest(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
@@ -491,16 +387,6 @@ func (service *Service) httpRequest(requestConfig *go_http.RequestConfig, skipAc
 		if e != nil {
 			return nil, nil, e
 		}
-		/*
-			if service.tokenSource.Token() == nil {
-				e.SetMessage("No Token.")
-				return nil, nil, e
-			}
-
-			if (*service.tokenSource.Token()).AccessToken == nil {
-				e.SetMessage("No AccessToken.")
-				return nil, nil, e
-			}*/
 
 		header := http.Header{}
 		if requestConfig.NonDefaultHeaders != nil {
