@@ -8,13 +8,18 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	errortools "github.com/leapforce-libraries/go_errortools"
 	go_http "github.com/leapforce-libraries/go_http"
+	go_token "github.com/leapforce-libraries/go_oauth2/token"
+	tokensource "github.com/leapforce-libraries/go_oauth2/tokensource"
 )
 
 const defaultRefreshMargin time.Duration = time.Minute
+
+var tokenMutex sync.Mutex
 
 type Service struct {
 	clientID        string
@@ -24,13 +29,9 @@ type Service struct {
 	tokenURL        string
 	tokenHTTPMethod string
 	refreshMargin   time.Duration // refresh at earliest {RefreshMargin} before expiry
-	tokenSource     TokenSource
-	//getTokenFunction  *func() (*Token, *errortools.Error)
-	//newTokenFunction  *func() (*Token, *errortools.Error)
-	//saveTokenFunction *func(token *Token) *errortools.Error
-	//token       *Token
-	locationUTC *time.Location
-	httpService *go_http.Service
+	tokenSource     tokensource.TokenSource
+	locationUTC     *time.Location
+	httpService     *go_http.Service
 }
 
 type ServiceConfig struct {
@@ -41,7 +42,7 @@ type ServiceConfig struct {
 	TokenURL        string
 	TokenHTTPMethod string
 	RefreshMargin   *time.Duration
-	TokenSource     TokenSource
+	TokenSource     tokensource.TokenSource
 }
 
 type ApiError struct {
@@ -173,11 +174,16 @@ func (service *Service) getToken(params *url.Values) *errortools.Error {
 		return e
 	}
 
-	token := Token{}
+	token := go_token.Token{}
 
 	err = json.Unmarshal(b, &token)
 	if err != nil {
 		e.SetMessage(err)
+		return e
+	}
+
+	e = service.parseExpireIn(&token)
+	if e != nil {
 		return e
 	}
 
@@ -208,7 +214,7 @@ func (service *Service) GetTokenFromCode(r *http.Request) *errortools.Error {
 
 // ValidateToken validates current token and retrieves a new one if necessary
 //
-func (service *Service) ValidateToken() (*Token, *errortools.Error) {
+func (service *Service) ValidateToken() (*go_token.Token, *errortools.Error) {
 	service.lockToken()
 	defer service.unlockToken()
 
@@ -226,34 +232,14 @@ func (service *Service) ValidateToken() (*Token, *errortools.Error) {
 
 	if service.tokenSource.Token() == nil {
 		// retrieve new token from source
-		e := service.tokenSource.NewToken()
+		token, e := service.tokenSource.NewToken()
 		if e != nil {
 			return nil, e
 		}
 
-		token := service.tokenSource.Token()
-
-		if token.ExpiresIn != nil {
-			var expiresInInt int64
-			var expiresInString string
-			err := json.Unmarshal(*token.ExpiresIn, &expiresInInt)
-			if err != nil {
-				err = json.Unmarshal(*token.ExpiresIn, &expiresInString)
-
-				if err == nil {
-					expiresInInt, err = strconv.ParseInt(expiresInString, 10, 64)
-				}
-			}
-
-			if err != nil {
-				return nil, errortools.ErrorMessage(fmt.Sprintf("Cannot convert ExpiresIn %s to Int64.", fmt.Sprintf("%v", *token.ExpiresIn)))
-			}
-
-			//convert to UTC
-			expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(service.locationUTC)
-			token.Expiry = &expiry
-		} else {
-			token.Expiry = nil
+		e = service.parseExpireIn(token)
+		if e != nil {
+			return nil, e
 		}
 
 		token.Print()
@@ -270,14 +256,14 @@ func (service *Service) ValidateToken() (*Token, *errortools.Error) {
 	}
 
 	// check existence of accesstoken
-	if !service.tokenSource.Token().hasAccessToken() {
+	if !service.tokenSource.Token().HasAccessToken() {
 		// re-retrieve used token
 		e := service.tokenSource.RetrieveToken()
 		if e != nil {
 			return nil, e
 		}
 
-		if !service.tokenSource.Token().hasAccessToken() {
+		if !service.tokenSource.Token().HasAccessToken() {
 			// stop if no access token found
 			return nil, errortools.ErrorMessage("Token has no accesscode")
 		}
@@ -286,11 +272,11 @@ func (service *Service) ValidateToken() (*Token, *errortools.Error) {
 	// token should be valid at least one minute from now (te be sure)
 	atTimeUTC := time.Now().In(service.locationUTC).Add(service.refreshMargin)
 
-	if service.tokenSource.Token().hasValidAccessToken(atTimeUTC) {
+	if service.tokenSource.Token().HasValidAccessToken(atTimeUTC) {
 		return service.tokenSource.Token(), nil
 	}
 
-	if service.tokenSource.Token().hasRefreshToken() {
+	if service.tokenSource.Token().HasRefreshToken() {
 		// refresh access token
 		data := url.Values{}
 		data.Set("client_id", service.clientID)
@@ -303,12 +289,43 @@ func (service *Service) ValidateToken() (*Token, *errortools.Error) {
 			return nil, e
 		}
 
-		if service.tokenSource.Token().hasValidAccessToken(atTimeUTC) {
+		if service.tokenSource.Token().HasValidAccessToken(atTimeUTC) {
 			return service.tokenSource.Token(), nil
 		}
 	}
 
 	return service.tokenSource.Token(), nil
+}
+
+func (service *Service) parseExpireIn(t *go_token.Token) *errortools.Error {
+	if t == nil {
+		return nil
+	}
+
+	if t.ExpiresIn != nil {
+		var expiresInInt int64
+		var expiresInString string
+		err := json.Unmarshal(*t.ExpiresIn, &expiresInInt)
+		if err != nil {
+			err = json.Unmarshal(*t.ExpiresIn, &expiresInString)
+
+			if err == nil {
+				expiresInInt, err = strconv.ParseInt(expiresInString, 10, 64)
+			}
+		}
+
+		if err != nil {
+			return errortools.ErrorMessage(fmt.Sprintf("Cannot convert ExpiresIn %s to Int64.", fmt.Sprintf("%v", *t.ExpiresIn)))
+		}
+
+		//convert to UTC
+		expiry := time.Now().Add(time.Duration(expiresInInt) * time.Second).In(service.locationUTC)
+		(*t).Expiry = &expiry
+	} else {
+		(*t).Expiry = nil
+	}
+
+	return nil
 }
 
 func (service *Service) initTokenNeeded() *errortools.Error {

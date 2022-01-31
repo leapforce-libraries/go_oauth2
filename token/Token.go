@@ -1,13 +1,10 @@
-package oauth2
+package token
 
 import (
 	"encoding/json"
 	"fmt"
-	"sync"
 	"time"
 )
-
-var tokenMutex sync.Mutex
 
 type Token struct {
 	AccessToken  *string          `json:"access_token"`
@@ -55,7 +52,7 @@ func (t *Token) Print() {
 	}
 }
 
-func (t *Token) hasAccessToken() bool {
+func (t *Token) HasAccessToken() bool {
 	if t == nil {
 		return false
 	}
@@ -68,8 +65,8 @@ func (t *Token) hasAccessToken() bool {
 	return true
 }
 
-func (t *Token) hasValidAccessToken(atTime time.Time) bool {
-	if !t.hasAccessToken() {
+func (t *Token) HasValidAccessToken(atTime time.Time) bool {
+	if !t.HasAccessToken() {
 		return false
 	}
 	if t.Expiry == nil {
@@ -82,7 +79,7 @@ func (t *Token) hasValidAccessToken(atTime time.Time) bool {
 	return true
 }
 
-func (t *Token) hasRefreshToken() bool {
+func (t *Token) HasRefreshToken() bool {
 	if t == nil {
 		return false
 	}

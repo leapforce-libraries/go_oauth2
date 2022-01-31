@@ -1,12 +1,13 @@
-package oauth2
+package tokenmap
 
 import (
 	errortools "github.com/leapforce-libraries/go_errortools"
 	gcs "github.com/leapforce-libraries/go_googlecloudstorage"
+	token "github.com/leapforce-libraries/go_oauth2/token"
 )
 
 type TokenMap struct {
-	token *Token
+	token *token.Token
 	map_  *gcs.Map
 }
 
@@ -20,17 +21,15 @@ func NewTokenMap(map_ *gcs.Map) (*TokenMap, *errortools.Error) {
 	}, nil
 }
 
-func (m *TokenMap) Token() *Token {
+func (m *TokenMap) Token() *token.Token {
 	return m.token
 }
 
-func (m *TokenMap) NewToken() *errortools.Error {
-	m.token = nil
-
-	return nil
+func (m *TokenMap) NewToken() (*token.Token, *errortools.Error) {
+	return nil, nil
 }
 
-func (m *TokenMap) SetToken(token *Token, save bool) *errortools.Error {
+func (m *TokenMap) SetToken(token *token.Token, save bool) *errortools.Error {
 	m.token = token
 
 	if !save {
@@ -47,7 +46,7 @@ func (m *TokenMap) RetrieveToken() *errortools.Error {
 	scope, _ := m.map_.Get("scope")
 	expiry, _ := m.map_.GetTimestamp("expiry")
 
-	m.token = &Token{
+	m.token = &token.Token{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		TokenType:    tokenType,
