@@ -224,35 +224,18 @@ func (service *Service) ValidateToken() (*go_token.Token, *errortools.Error) {
 		if e != nil {
 			return nil, e
 		}
-
-		if service.tokenSource.Token() == nil {
-			return nil, errortools.ErrorMessage("Unable to retrieve token")
-		}
 	}
 
 	if service.tokenSource.Token() == nil {
 		// retrieve new token from source
-		token, e := service.tokenSource.NewToken()
-		if e != nil {
-			return nil, e
-		}
-
-		e = service.parseExpireIn(token)
-		if e != nil {
-			return nil, e
-		}
-
-		token.Print()
-
-		e = service.tokenSource.SetToken(token, true)
+		e := service.newToken()
 		if e != nil {
 			return nil, e
 		}
 	}
 
 	if service.tokenSource.Token() == nil {
-		// stop if no token found
-		return nil, service.initTokenNeeded()
+		return nil, errortools.ErrorMessage("Unable to retrieve token")
 	}
 
 	// check existence of accesstoken
@@ -288,13 +271,41 @@ func (service *Service) ValidateToken() (*go_token.Token, *errortools.Error) {
 		if e != nil {
 			return nil, e
 		}
-
-		if service.tokenSource.Token().HasValidAccessToken(atTimeUTC) {
-			return service.tokenSource.Token(), nil
+	} else {
+		// retrieve new token from source
+		e := service.newToken()
+		if e != nil {
+			return nil, e
 		}
 	}
 
-	return service.tokenSource.Token(), nil
+	if service.tokenSource.Token().HasValidAccessToken(atTimeUTC) {
+		return service.tokenSource.Token(), nil
+	}
+
+	return nil, service.initTokenNeeded()
+}
+
+func (service *Service) newToken() *errortools.Error {
+	// retrieve new token from source
+	token, e := service.tokenSource.NewToken()
+	if e != nil {
+		return e
+	}
+
+	e = service.parseExpireIn(token)
+	if e != nil {
+		return e
+	}
+
+	token.Print()
+
+	e = service.tokenSource.SetToken(token, true)
+	if e != nil {
+		return e
+	}
+
+	return nil
 }
 
 func (service *Service) parseExpireIn(t *go_token.Token) *errortools.Error {
