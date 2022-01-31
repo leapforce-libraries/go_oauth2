@@ -38,20 +38,22 @@ func (m *TokenMap) SetToken(token *Token, save bool) *errortools.Error {
 	return m.SaveToken()
 }
 
-func (m *TokenMap) RetrieveToken() (*Token, *errortools.Error) {
+func (m *TokenMap) RetrieveToken() (*errortools.Error) {
 	accessToken, _ := m.map_.Get("access_token")
 	refreshToken, _ := m.map_.Get("refresh_token")
 	tokenType, _ := m.map_.Get("token_type")
 	scope, _ := m.map_.Get("scope")
 	expiry, _ := m.map_.GetTimestamp("expiry")
 
-	return &Token{
+	m.token = &Token{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		TokenType:    tokenType,
 		Scope:        scope,
 		Expiry:       expiry,
-	}, nil
+	}
+	
+	return nil
 }
 
 func (m *TokenMap) SaveToken() *errortools.Error {
