@@ -343,7 +343,7 @@ func (service *Service) initTokenNeeded() *errortools.Error {
 	return errortools.ErrorMessage("No valid accesscode or refreshcode found. Please reconnect.")
 }
 
-func (service *Service) authorizeURL(scope string, accessType *string, prompt *string, state *string) string {
+func (service *Service) AuthorizeURL(scope string, accessType *string, prompt *string, state *string) string {
 	params := url.Values{}
 	params.Set("redirect_uri", service.redirectURL)
 	params.Set("client_id", service.clientID)
@@ -372,7 +372,7 @@ func (service *Service) InitToken(scope string, accessType *string, prompt *stri
 
 	fmt.Println("Go to this url to get new access token:")
 	fmt.Println()
-	fmt.Println(service.authorizeURL(scope, accessType, prompt, state))
+	fmt.Println(service.AuthorizeURL(scope, accessType, prompt, state))
 	fmt.Println()
 
 	// Create a new redirect route
