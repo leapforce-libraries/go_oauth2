@@ -427,10 +427,10 @@ func (service *Service) httpRequest(requestConfig *go_http.RequestConfig, skipAc
 	return service.httpService.HTTPRequest(requestConfig)
 }
 
-func (service *Service) APICallCount() int64 {
+func (service *Service) ApiCallCount() int64 {
 	return service.httpService.RequestCount()
 }
 
-func (service Service) APIReset() {
+func (service Service) ApiReset() {
 	service.httpService.ResetRequestCount()
 }
