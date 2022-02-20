@@ -22,12 +22,12 @@ const defaultRefreshMargin time.Duration = time.Minute
 var tokenMutex sync.Mutex
 
 type Service struct {
-	clientID        string
+	clientId        string
 	clientSecret    string
-	redirectURL     string
-	authURL         string
-	tokenURL        string
-	tokenHTTPMethod string
+	redirectUrl     string
+	authUrl         string
+	tokenUrl        string
+	tokenHttpMethod string
 	refreshMargin   time.Duration // refresh at earliest {RefreshMargin} before expiry
 	tokenSource     tokensource.TokenSource
 	locationUTC     *time.Location
@@ -35,12 +35,12 @@ type Service struct {
 }
 
 type ServiceConfig struct {
-	ClientID        string
+	ClientId        string
 	ClientSecret    string
-	RedirectURL     string
-	AuthURL         string
-	TokenURL        string
-	TokenHTTPMethod string
+	RedirectUrl     string
+	AuthUrl         string
+	TokenUrl        string
+	TokenHttpMethod string
 	RefreshMargin   *time.Duration
 	TokenSource     tokensource.TokenSource
 }
@@ -68,13 +68,13 @@ func NewService(serviceConfig *ServiceConfig) (*Service, *errortools.Error) {
 	}
 
 	return &Service{
-		clientID:        serviceConfig.ClientID,
+		clientId:        serviceConfig.ClientId,
 		clientSecret:    serviceConfig.ClientSecret,
-		redirectURL:     serviceConfig.RedirectURL,
-		authURL:         serviceConfig.AuthURL,
-		tokenURL:        serviceConfig.TokenURL,
+		redirectUrl:     serviceConfig.RedirectUrl,
+		authUrl:         serviceConfig.AuthUrl,
+		tokenUrl:        serviceConfig.TokenUrl,
 		refreshMargin:   refreshMargin,
-		tokenHTTPMethod: serviceConfig.TokenHTTPMethod,
+		tokenHttpMethod: serviceConfig.TokenHttpMethod,
 		tokenSource:     serviceConfig.TokenSource,
 		locationUTC:     locUTC,
 		httpService:     httpService,
@@ -94,8 +94,8 @@ func (service *Service) getToken(params *url.Values) *errortools.Error {
 
 	e := new(errortools.Error)
 
-	if service.tokenHTTPMethod == http.MethodGet {
-		url := service.tokenURL
+	if service.tokenHttpMethod == http.MethodGet {
+		url := service.tokenUrl
 
 		if params != nil {
 			if len(*params) > 0 {
@@ -113,7 +113,7 @@ func (service *Service) getToken(params *url.Values) *errortools.Error {
 		}
 
 		request = req
-	} else if service.tokenHTTPMethod == http.MethodPost {
+	} else if service.tokenHttpMethod == http.MethodPost {
 
 		encoded := ""
 		body := new(strings.Reader)
@@ -122,7 +122,7 @@ func (service *Service) getToken(params *url.Values) *errortools.Error {
 			body = strings.NewReader(encoded)
 		}
 
-		req, err := http.NewRequest(http.MethodPost, service.tokenURL, body)
+		req, err := http.NewRequest(http.MethodPost, service.tokenUrl, body)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Content-Length", strconv.Itoa(len(encoded)))
 		req.Header.Set("Accept", "application/json")
@@ -134,13 +134,13 @@ func (service *Service) getToken(params *url.Values) *errortools.Error {
 
 		request = req
 	} else {
-		e.SetMessage(fmt.Sprintf("Invalid TokenHTTPMethod: %s", service.tokenHTTPMethod))
+		e.SetMessage(fmt.Sprintf("Invalid TokenHttpMethod: %s", service.tokenHttpMethod))
 		return e
 	}
 
 	httpClient := http.Client{}
 
-	// Send out the HTTP request
+	// Send out the Http request
 	res, err := httpClient.Do(request)
 	e.SetResponse(res)
 	if err != nil {
@@ -203,11 +203,11 @@ func (service *Service) GetTokenFromCode(r *http.Request) *errortools.Error {
 	code := r.FormValue("code")
 
 	data := url.Values{}
-	data.Set("client_id", service.clientID)
+	data.Set("client_id", service.clientId)
 	data.Set("client_secret", service.clientSecret)
 	data.Set("code", code)
 	data.Set("grant_type", "authorization_code")
-	data.Set("redirect_uri", service.redirectURL)
+	data.Set("redirect_uri", service.redirectUrl)
 
 	return service.getToken(&data)
 }
@@ -262,7 +262,7 @@ func (service *Service) ValidateToken() (*go_token.Token, *errortools.Error) {
 	if service.tokenSource.Token().HasRefreshToken() {
 		// refresh access token
 		data := url.Values{}
-		data.Set("client_id", service.clientID)
+		data.Set("client_id", service.clientId)
 		data.Set("client_secret", service.clientSecret)
 		data.Set("refresh_token", *(*service.tokenSource.Token()).RefreshToken)
 		data.Set("grant_type", "refresh_token")
@@ -343,10 +343,10 @@ func (service *Service) initTokenNeeded() *errortools.Error {
 	return errortools.ErrorMessage("No valid accesscode or refreshcode found. Please reconnect.")
 }
 
-func (service *Service) AuthorizeURL(scope string, accessType *string, prompt *string, state *string) string {
+func (service *Service) AuthorizeUrl(scope string, accessType *string, prompt *string, state *string) string {
 	params := url.Values{}
-	params.Set("redirect_uri", service.redirectURL)
-	params.Set("client_id", service.clientID)
+	params.Set("redirect_uri", service.redirectUrl)
+	params.Set("client_id", service.clientId)
 	params.Set("response_type", "code")
 	params.Set("scope", scope)
 
@@ -362,7 +362,7 @@ func (service *Service) AuthorizeURL(scope string, accessType *string, prompt *s
 		params.Set("state", *state)
 	}
 
-	return fmt.Sprintf("%s?%s", service.authURL, params.Encode())
+	return fmt.Sprintf("%s?%s", service.authUrl, params.Encode())
 }
 
 func (service *Service) InitToken(scope string, accessType *string, prompt *string, state *string) *errortools.Error {
@@ -372,7 +372,7 @@ func (service *Service) InitToken(scope string, accessType *string, prompt *stri
 
 	fmt.Println("Go to this url to get new access token:")
 	fmt.Println()
-	fmt.Println(service.AuthorizeURL(scope, accessType, prompt, state))
+	fmt.Println(service.AuthorizeUrl(scope, accessType, prompt, state))
 	fmt.Println()
 
 	// Create a new redirect route
@@ -395,13 +395,13 @@ func (service *Service) InitToken(scope string, accessType *string, prompt *stri
 	return nil
 }
 
-// HTTPRequest returns http.Response for generic oAuth2 http call
+// HttpRequest returns http.Response for generic oAuth2 http call
 //
-func (service *Service) HTTPRequest(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+func (service *Service) HttpRequest(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
 	return service.httpRequest(requestConfig, false)
 }
 
-func (service *Service) HTTPRequestWithoutAccessToken(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
+func (service *Service) HttpRequestWithoutAccessToken(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
 	return service.httpRequest(requestConfig, true)
 }
 
@@ -424,7 +424,7 @@ func (service *Service) httpRequest(requestConfig *go_http.RequestConfig, skipAc
 		requestConfig.NonDefaultHeaders = &header
 	}
 
-	return service.httpService.HTTPRequest(requestConfig)
+	return service.httpService.HttpRequest(requestConfig)
 }
 
 func (service *Service) ApiCallCount() int64 {
