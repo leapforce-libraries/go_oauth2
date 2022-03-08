@@ -30,6 +30,13 @@ func (m *TokenMap) NewToken() (*token.Token, *errortools.Error) {
 }
 
 func (m *TokenMap) SetToken(token *token.Token, save bool) *errortools.Error {
+	if token.AccessToken == nil {
+		return errortools.ErrorMessage("AccessToken of new token is nil")
+	}
+
+	if token.RefreshToken == nil {
+		token.RefreshToken = m.token.RefreshToken
+	}
 	m.token = token
 
 	if !save {
