@@ -195,12 +195,24 @@ func (service *Service) getToken(params *url.Values) *errortools.Error {
 	return nil
 }
 
-func (service *Service) GetTokenFromCode(r *http.Request) *errortools.Error {
+func (service *Service) GetTokenFromCode(r *http.Request, checkState *func(state string) *errortools.Error) *errortools.Error {
 	err := r.ParseForm()
 	if err != nil {
 		return errortools.ErrorMessage(err)
 	}
 	code := r.FormValue("code")
+
+	if checkState != nil {
+		state := r.FormValue("state")
+		if state == "" {
+			return errortools.ErrorMessage("No state returned")
+		}
+
+		e := (*checkState)(state)
+		if e != nil {
+			return e
+		}
+	}
 
 	data := url.Values{}
 	data.Set("client_id", service.clientId)
@@ -365,6 +377,7 @@ func (service *Service) AuthorizeUrl(scope string, accessType *string, prompt *s
 	return fmt.Sprintf("%s?%s", service.authUrl, params.Encode())
 }
 
+/*
 func (service *Service) InitToken(scope string, accessType *string, prompt *string, state *string) *errortools.Error {
 	if service == nil {
 		return errortools.ErrorMessage("Service variable is nil pointer")
@@ -393,7 +406,7 @@ func (service *Service) InitToken(scope string, accessType *string, prompt *stri
 	http.ListenAndServe(":8080", nil)
 
 	return nil
-}
+}*/
 
 // HttpRequest returns http.Response for generic oAuth2 http call
 //
