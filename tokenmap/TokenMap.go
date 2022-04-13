@@ -47,11 +47,26 @@ func (m *TokenMap) SetToken(token *token.Token, save bool) *errortools.Error {
 }
 
 func (m *TokenMap) RetrieveToken() *errortools.Error {
-	accessToken, _ := m.map_.Get("access_token")
-	refreshToken, _ := m.map_.Get("refresh_token")
-	tokenType, _ := m.map_.Get("token_type")
-	scope, _ := m.map_.Get("scope")
-	expiry, _ := m.map_.GetTimestamp("expiry")
+	accessToken, e := m.map_.Get("access_token")
+	if e != nil {
+		return e
+	}
+	refreshToken, e := m.map_.Get("refresh_token")
+	if e != nil {
+		return e
+	}
+	tokenType, e := m.map_.Get("token_type")
+	if e != nil {
+		return e
+	}
+	scope, e := m.map_.Get("scope")
+	if e != nil {
+		return e
+	}
+	expiry, e := m.map_.GetTimestamp("expiry")
+	if e != nil {
+		return e
+	}
 
 	m.token = &token.Token{
 		AccessToken:  accessToken,
