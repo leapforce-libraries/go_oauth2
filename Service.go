@@ -18,6 +18,7 @@ import (
 )
 
 const defaultRefreshMargin time.Duration = time.Minute
+const defaultClientIdName string = "client_id"
 
 var tokenMutex sync.Mutex
 
@@ -32,6 +33,7 @@ type Service struct {
 	tokenSource     tokensource.TokenSource
 	locationUTC     *time.Location
 	httpService     *go_http.Service
+	clientIdName    string
 }
 
 type ServiceConfig struct {
@@ -43,6 +45,7 @@ type ServiceConfig struct {
 	TokenHttpMethod string
 	RefreshMargin   *time.Duration
 	TokenSource     tokensource.TokenSource
+	ClientIdName    *string
 }
 
 type ApiError struct {
@@ -67,6 +70,10 @@ func NewService(serviceConfig *ServiceConfig) (*Service, *errortools.Error) {
 		refreshMargin = *serviceConfig.RefreshMargin
 	}
 
+	cn := defaultClientIdName
+	if serviceConfig.ClientIdName != nil {
+		cn = *serviceConfig.ClientIdName
+	}
 	return &Service{
 		clientId:        serviceConfig.ClientId,
 		clientSecret:    serviceConfig.ClientSecret,
@@ -78,6 +85,7 @@ func NewService(serviceConfig *ServiceConfig) (*Service, *errortools.Error) {
 		tokenSource:     serviceConfig.TokenSource,
 		locationUTC:     locUTC,
 		httpService:     httpService,
+		clientIdName:    cn,
 	}, nil
 }
 
@@ -215,7 +223,7 @@ func (service *Service) GetTokenFromCode(r *http.Request, checkState *func(state
 	}
 
 	data := url.Values{}
-	data.Set("client_id", service.clientId)
+	data.Set(service.clientIdName, service.clientId)
 	data.Set("client_secret", service.clientSecret)
 	data.Set("code", code)
 	data.Set("grant_type", "authorization_code")
@@ -274,7 +282,7 @@ func (service *Service) ValidateToken() (*go_token.Token, *errortools.Error) {
 	if service.tokenSource.Token().HasRefreshToken() {
 		// refresh access token
 		data := url.Values{}
-		data.Set("client_id", service.clientId)
+		data.Set(service.clientIdName, service.clientId)
 		data.Set("client_secret", service.clientSecret)
 		data.Set("refresh_token", *(*service.tokenSource.Token()).RefreshToken)
 		data.Set("grant_type", "refresh_token")
@@ -358,7 +366,7 @@ func (service *Service) initTokenNeeded() *errortools.Error {
 func (service *Service) AuthorizeUrl(scope string, accessType *string, prompt *string, state *string) string {
 	params := url.Values{}
 	params.Set("redirect_uri", service.redirectUrl)
-	params.Set("client_id", service.clientId)
+	params.Set(service.clientIdName, service.clientId)
 	params.Set("response_type", "code")
 	params.Set("scope", scope)
 
