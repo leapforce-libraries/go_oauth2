@@ -200,7 +200,7 @@ func (service *Service) getToken(params *url.Values) *errortools.Error {
 	return nil
 }
 
-func (service *Service) GetTokenFromCode(r *http.Request, checkState *func(state string) *errortools.Error) *errortools.Error {
+func (service *Service) GetTokenFromCode(r *http.Request, checkState *func(state string) *errortools.Error, includeRedirectUri bool) *errortools.Error {
 	err := r.ParseForm()
 	if err != nil {
 		return errortools.ErrorMessage(err)
@@ -224,7 +224,9 @@ func (service *Service) GetTokenFromCode(r *http.Request, checkState *func(state
 	data.Set("client_secret", service.clientSecret)
 	data.Set("code", code)
 	data.Set("grant_type", "authorization_code")
-	data.Set("redirect_uri", service.redirectUrl)
+	if includeRedirectUri {
+		data.Set("redirect_uri", service.redirectUrl)
+	}
 
 	return service.getToken(&data)
 }
