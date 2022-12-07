@@ -36,3 +36,7 @@ func (m *TokenFixed) RetrieveToken() *errortools.Error {
 func (m *TokenFixed) SaveToken() *errortools.Error {
 	return nil
 }
+
+func (m *TokenFixed) UnmarshalToken(b []byte) (*token.Token, *errortools.Error) {
+	return nil, nil
+}
