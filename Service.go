@@ -182,20 +182,25 @@ func (service *Service) getToken(params *url.Values) *errortools.Error {
 		return e
 	}
 
-	token := go_token.Token{}
-
-	err = json.Unmarshal(b, &token)
-	if err != nil {
-		e.SetMessage(err)
+	//token := go_token.Token{}
+	
+	token, e := service.tokenSource.UnmarshalToken(b)
+	if e != nil {
 		return e
 	}
+	/*
+		err = json.Unmarshal(b, &token)
+		if err != nil {
+			e.SetMessage(err)
+			return e
+		}*/
 
-	e = service.parseExpireIn(&token)
+	e = service.parseExpireIn(token)
 	if e != nil {
 		return e
 	}
 
-	e = service.tokenSource.SetToken(&token, true)
+	e = service.tokenSource.SetToken(token, true)
 	if e != nil {
 		return e
 	}

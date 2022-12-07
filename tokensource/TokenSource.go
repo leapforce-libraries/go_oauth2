@@ -11,4 +11,5 @@ type TokenSource interface {
 	SetToken(*token.Token, bool) *errortools.Error
 	RetrieveToken() *errortools.Error
 	SaveToken() *errortools.Error
+	UnmarshalToken([]byte) (*token.Token, *errortools.Error)
 }

@@ -1,6 +1,7 @@
 package tokenmap
 
 import (
+	"encoding/json"
 	errortools "github.com/leapforce-libraries/go_errortools"
 	gcs "github.com/leapforce-libraries/go_googlecloudstorage"
 	token "github.com/leapforce-libraries/go_oauth2/token"
@@ -110,4 +111,14 @@ func (m *TokenMap) SaveToken() *errortools.Error {
 	}
 
 	return nil
+}
+
+func (m *TokenMap) UnmarshalToken(b []byte) (*token.Token, *errortools.Error) {
+	var token token.Token
+
+	err := json.Unmarshal(b, &token)
+	if err != nil {
+		return nil, errortools.ErrorMessage(err)
+	}
+	return &token, nil
 }
