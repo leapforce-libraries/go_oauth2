@@ -28,6 +28,7 @@ type Service struct {
 	redirectUrl     string
 	authUrl         string
 	tokenUrl        string
+	refreshTokenUrl *string
 	tokenHttpMethod string
 	refreshMargin   time.Duration // refresh at earliest {RefreshMargin} before expiry
 	tokenSource     tokensource.TokenSource
@@ -97,14 +98,12 @@ func (*Service) unlockToken() {
 	tokenMutex.Unlock()
 }
 
-func (service *Service) getToken(params *url.Values) *errortools.Error {
+func (service *Service) getToken(url string, params *url.Values) *errortools.Error {
 	var request *http.Request = nil
 
 	e := new(errortools.Error)
 
 	if service.tokenHttpMethod == http.MethodGet {
-		url := service.tokenUrl
-
 		if params != nil {
 			if len(*params) > 0 {
 				url = fmt.Sprintf("%s?%s", url, (*params).Encode())
@@ -130,7 +129,7 @@ func (service *Service) getToken(params *url.Values) *errortools.Error {
 			body = strings.NewReader(encoded)
 		}
 
-		req, err := http.NewRequest(http.MethodPost, service.tokenUrl, body)
+		req, err := http.NewRequest(http.MethodPost, url, body)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Content-Length", strconv.Itoa(len(encoded)))
 		req.Header.Set("Accept", "application/json")
@@ -236,7 +235,7 @@ func (service *Service) getTokenFromCode(r *http.Request, checkState *func(state
 		data.Set("redirect_uri", service.redirectUrl)
 	}
 
-	return service.getToken(&data)
+	return service.getToken(service.tokenUrl, &data)
 }
 
 // ValidateToken validates current token and retrieves a new one if necessary
@@ -294,7 +293,12 @@ func (service *Service) ValidateToken() (*go_token.Token, *errortools.Error) {
 		data.Set("refresh_token", *(*service.tokenSource.Token()).RefreshToken)
 		data.Set("grant_type", "refresh_token")
 
-		e := service.getToken(&data)
+		url := service.tokenUrl
+		if service.refreshTokenUrl != nil {
+			url = *service.refreshTokenUrl
+		}
+
+		e := service.getToken(url, &data)
 		if e != nil {
 			return nil, e
 		}
@@ -324,8 +328,6 @@ func (service *Service) newToken() *errortools.Error {
 	if e != nil {
 		return e
 	}
-
-	token.Print()
 
 	e = service.tokenSource.SetToken(token, true)
 	if e != nil {
