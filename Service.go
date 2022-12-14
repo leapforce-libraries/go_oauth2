@@ -27,8 +27,8 @@ type Service struct {
 	clientSecret    string
 	redirectUrl     string
 	authUrl         string
-	tokenUrl        string
-	refreshTokenUrl *string
+	accessTokenUrl  string
+	refreshTokenUrl string
 	tokenHttpMethod string
 	refreshMargin   time.Duration // refresh at earliest {RefreshMargin} before expiry
 	tokenSource     tokensource.TokenSource
@@ -43,6 +43,7 @@ type ServiceConfig struct {
 	RedirectUrl     string
 	AuthUrl         string
 	TokenUrl        string
+	RefreshTokenUrl *string
 	TokenHttpMethod string
 	RefreshMargin   *time.Duration
 	TokenSource     tokensource.TokenSource
@@ -75,12 +76,17 @@ func NewService(serviceConfig *ServiceConfig) (*Service, *errortools.Error) {
 	if serviceConfig.ClientIdName != nil {
 		cn = *serviceConfig.ClientIdName
 	}
+	refreshTokenUrl := serviceConfig.TokenUrl
+	if serviceConfig.RefreshTokenUrl != nil {
+		refreshTokenUrl = *serviceConfig.RefreshTokenUrl
+	}
 	return &Service{
 		clientId:        serviceConfig.ClientId,
 		clientSecret:    serviceConfig.ClientSecret,
 		redirectUrl:     serviceConfig.RedirectUrl,
 		authUrl:         serviceConfig.AuthUrl,
-		tokenUrl:        serviceConfig.TokenUrl,
+		accessTokenUrl:  serviceConfig.TokenUrl,
+		refreshTokenUrl: refreshTokenUrl,
 		refreshMargin:   refreshMargin,
 		tokenHttpMethod: serviceConfig.TokenHttpMethod,
 		tokenSource:     serviceConfig.TokenSource,
@@ -235,7 +241,7 @@ func (service *Service) getTokenFromCode(r *http.Request, checkState *func(state
 		data.Set("redirect_uri", service.redirectUrl)
 	}
 
-	return service.getToken(service.tokenUrl, &data)
+	return service.getToken(service.accessTokenUrl, &data)
 }
 
 // ValidateToken validates current token and retrieves a new one if necessary
@@ -293,12 +299,7 @@ func (service *Service) ValidateToken() (*go_token.Token, *errortools.Error) {
 		data.Set("refresh_token", *(*service.tokenSource.Token()).RefreshToken)
 		data.Set("grant_type", "refresh_token")
 
-		url := service.tokenUrl
-		if service.refreshTokenUrl != nil {
-			url = *service.refreshTokenUrl
-		}
-
-		e := service.getToken(url, &data)
+		e := service.getToken(service.refreshTokenUrl, &data)
 		if e != nil {
 			return nil, e
 		}
