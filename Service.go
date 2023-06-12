@@ -3,7 +3,7 @@ package oauth2
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -23,31 +23,33 @@ const defaultClientIdName string = "client_id"
 var tokenMutex sync.Mutex
 
 type Service struct {
-	clientId        string
-	clientSecret    string
-	redirectUrl     string
-	authUrl         string
-	accessTokenUrl  string
-	refreshTokenUrl string
-	tokenHttpMethod string
-	refreshMargin   time.Duration // refresh at earliest {RefreshMargin} before expiry
-	tokenSource     tokensource.TokenSource
-	locationUTC     *time.Location
-	httpService     *go_http.Service
-	clientIdName    string
+	clientId             string
+	clientSecret         string
+	redirectUrl          string
+	authUrl              string
+	accessTokenUrl       string
+	refreshTokenUrl      string
+	tokenHttpMethod      string
+	refreshMargin        time.Duration // refresh at earliest {RefreshMargin} before expiry
+	tokenSource          tokensource.TokenSource
+	locationUTC          *time.Location
+	httpService          *go_http.Service
+	clientIdName         string
+	getTokenFromCodeFunc *func(r *http.Request) *errortools.Error
 }
 
 type ServiceConfig struct {
-	ClientId        string
-	ClientSecret    string
-	RedirectUrl     string
-	AuthUrl         string
-	TokenUrl        string
-	RefreshTokenUrl *string
-	TokenHttpMethod string
-	RefreshMargin   *time.Duration
-	TokenSource     tokensource.TokenSource
-	ClientIdName    *string
+	ClientId             string
+	ClientSecret         string
+	RedirectUrl          string
+	AuthUrl              string
+	TokenUrl             string
+	RefreshTokenUrl      *string
+	TokenHttpMethod      string
+	RefreshMargin        *time.Duration
+	TokenSource          tokensource.TokenSource
+	ClientIdName         *string
+	GetTokenFromCodeFunc *func(r *http.Request) *errortools.Error
 }
 
 type ApiError struct {
@@ -81,18 +83,19 @@ func NewService(serviceConfig *ServiceConfig) (*Service, *errortools.Error) {
 		refreshTokenUrl = *serviceConfig.RefreshTokenUrl
 	}
 	return &Service{
-		clientId:        serviceConfig.ClientId,
-		clientSecret:    serviceConfig.ClientSecret,
-		redirectUrl:     serviceConfig.RedirectUrl,
-		authUrl:         serviceConfig.AuthUrl,
-		accessTokenUrl:  serviceConfig.TokenUrl,
-		refreshTokenUrl: refreshTokenUrl,
-		refreshMargin:   refreshMargin,
-		tokenHttpMethod: serviceConfig.TokenHttpMethod,
-		tokenSource:     serviceConfig.TokenSource,
-		locationUTC:     locUTC,
-		httpService:     httpService,
-		clientIdName:    cn,
+		clientId:             serviceConfig.ClientId,
+		clientSecret:         serviceConfig.ClientSecret,
+		redirectUrl:          serviceConfig.RedirectUrl,
+		authUrl:              serviceConfig.AuthUrl,
+		accessTokenUrl:       serviceConfig.TokenUrl,
+		refreshTokenUrl:      refreshTokenUrl,
+		refreshMargin:        refreshMargin,
+		tokenHttpMethod:      serviceConfig.TokenHttpMethod,
+		tokenSource:          serviceConfig.TokenSource,
+		locationUTC:          locUTC,
+		httpService:          httpService,
+		clientIdName:         cn,
+		getTokenFromCodeFunc: serviceConfig.GetTokenFromCodeFunc,
 	}, nil
 }
 
@@ -163,7 +166,7 @@ func (service *Service) getToken(url string, params *url.Values) *errortools.Err
 
 	defer res.Body.Close()
 
-	b, err := ioutil.ReadAll(res.Body)
+	b, err := io.ReadAll(res.Body)
 	if err != nil {
 		e.SetMessage(err)
 		return e
@@ -206,6 +209,9 @@ func (service *Service) getToken(url string, params *url.Values) *errortools.Err
 }
 
 func (service *Service) GetTokenFromCode(r *http.Request, checkState *func(state string) *errortools.Error) *errortools.Error {
+	if service.getTokenFromCodeFunc != nil {
+		return (*service.getTokenFromCodeFunc)(r)
+	}
 	return service.getTokenFromCode(r, checkState, true)
 }
 
@@ -245,7 +251,6 @@ func (service *Service) getTokenFromCode(r *http.Request, checkState *func(state
 }
 
 // ValidateToken validates current token and retrieves a new one if necessary
-//
 func (service *Service) ValidateToken() (*go_token.Token, *errortools.Error) {
 	service.lockToken()
 	defer service.unlockToken()
@@ -427,7 +432,6 @@ func (service *Service) InitToken(scope string, accessType *string, prompt *stri
 }*/
 
 // HttpRequest returns http.Response for generic oAuth2 http call
-//
 func (service *Service) HttpRequest(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
 	return service.httpRequest(requestConfig, false)
 }
@@ -437,7 +441,6 @@ func (service *Service) HttpRequestWithoutAccessToken(requestConfig *go_http.Req
 }
 
 // httpRequest returns http.Response for generic oAuth2 http call
-//
 func (service *Service) httpRequest(requestConfig *go_http.RequestConfig, skipAccessToken bool) (*http.Request, *http.Response, *errortools.Error) {
 	// Authorization header
 	if !skipAccessToken {
