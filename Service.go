@@ -23,33 +23,33 @@ const defaultClientIdName string = "client_id"
 var tokenMutex sync.Mutex
 
 type Service struct {
-	clientId             string
-	clientSecret         string
-	redirectUrl          string
-	authUrl              string
-	accessTokenUrl       string
-	refreshTokenUrl      string
-	tokenHttpMethod      string
-	refreshMargin        time.Duration // refresh at earliest {RefreshMargin} before expiry
-	tokenSource          tokensource.TokenSource
-	locationUTC          *time.Location
-	httpService          *go_http.Service
-	clientIdName         string
-	getTokenFromCodeFunc *func(r *http.Request) *errortools.Error
+	clientId                string
+	clientSecret            string
+	redirectUrl             string
+	authUrl                 string
+	accessTokenUrl          string
+	refreshTokenUrl         string
+	tokenHttpMethod         string
+	refreshMargin           time.Duration // refresh at earliest {RefreshMargin} before expiry
+	tokenSource             tokensource.TokenSource
+	locationUTC             *time.Location
+	httpService             *go_http.Service
+	clientIdName            string
+	getTokenFromRequestFunc *func(r *http.Request) (*http.Request, *errortools.Error)
 }
 
 type ServiceConfig struct {
-	ClientId             string
-	ClientSecret         string
-	RedirectUrl          string
-	AuthUrl              string
-	TokenUrl             string
-	RefreshTokenUrl      *string
-	TokenHttpMethod      string
-	RefreshMargin        *time.Duration
-	TokenSource          tokensource.TokenSource
-	ClientIdName         *string
-	GetTokenFromCodeFunc *func(r *http.Request) *errortools.Error
+	ClientId                string
+	ClientSecret            string
+	RedirectUrl             string
+	AuthUrl                 string
+	TokenUrl                string
+	RefreshTokenUrl         *string
+	TokenHttpMethod         string
+	RefreshMargin           *time.Duration
+	TokenSource             tokensource.TokenSource
+	ClientIdName            *string
+	GetTokenFromRequestFunc *func(r *http.Request) (*http.Request, *errortools.Error)
 }
 
 type ApiError struct {
@@ -83,19 +83,19 @@ func NewService(serviceConfig *ServiceConfig) (*Service, *errortools.Error) {
 		refreshTokenUrl = *serviceConfig.RefreshTokenUrl
 	}
 	return &Service{
-		clientId:             serviceConfig.ClientId,
-		clientSecret:         serviceConfig.ClientSecret,
-		redirectUrl:          serviceConfig.RedirectUrl,
-		authUrl:              serviceConfig.AuthUrl,
-		accessTokenUrl:       serviceConfig.TokenUrl,
-		refreshTokenUrl:      refreshTokenUrl,
-		refreshMargin:        refreshMargin,
-		tokenHttpMethod:      serviceConfig.TokenHttpMethod,
-		tokenSource:          serviceConfig.TokenSource,
-		locationUTC:          locUTC,
-		httpService:          httpService,
-		clientIdName:         cn,
-		getTokenFromCodeFunc: serviceConfig.GetTokenFromCodeFunc,
+		clientId:                serviceConfig.ClientId,
+		clientSecret:            serviceConfig.ClientSecret,
+		redirectUrl:             serviceConfig.RedirectUrl,
+		authUrl:                 serviceConfig.AuthUrl,
+		accessTokenUrl:          serviceConfig.TokenUrl,
+		refreshTokenUrl:         refreshTokenUrl,
+		refreshMargin:           refreshMargin,
+		tokenHttpMethod:         serviceConfig.TokenHttpMethod,
+		tokenSource:             serviceConfig.TokenSource,
+		locationUTC:             locUTC,
+		httpService:             httpService,
+		clientIdName:            cn,
+		getTokenFromRequestFunc: serviceConfig.GetTokenFromRequestFunc,
 	}, nil
 }
 
@@ -107,54 +107,10 @@ func (*Service) unlockToken() {
 	tokenMutex.Unlock()
 }
 
-func (service *Service) getToken(url string, params *url.Values) *errortools.Error {
-	var request *http.Request = nil
-
-	e := new(errortools.Error)
-
-	if service.tokenHttpMethod == http.MethodGet {
-		if params != nil {
-			if len(*params) > 0 {
-				url = fmt.Sprintf("%s?%s", url, (*params).Encode())
-			}
-		}
-
-		req, err := http.NewRequest(http.MethodGet, url, nil)
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Set("Accept", "application/json")
-		e.SetRequest(req)
-		if err != nil {
-			e.SetMessage(err)
-			return e
-		}
-
-		request = req
-	} else if service.tokenHttpMethod == http.MethodPost {
-
-		encoded := ""
-		body := new(strings.Reader)
-		if params != nil {
-			encoded = params.Encode()
-			body = strings.NewReader(encoded)
-		}
-
-		req, err := http.NewRequest(http.MethodPost, url, body)
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		req.Header.Set("Content-Length", strconv.Itoa(len(encoded)))
-		req.Header.Set("Accept", "application/json")
-		e.SetRequest(req)
-		if err != nil {
-			e.SetMessage(err)
-			return e
-		}
-
-		request = req
-	} else {
-		e.SetMessage(fmt.Sprintf("Invalid TokenHttpMethod: %s", service.tokenHttpMethod))
-		return e
-	}
-
+func (service *Service) getTokenFromRequest(request *http.Request) *errortools.Error {
 	httpClient := http.Client{}
+	e := new(errortools.Error)
+	e.SetRequest(request)
 
 	// Send out the Http request
 	res, err := httpClient.Do(request)
@@ -208,9 +164,56 @@ func (service *Service) getToken(url string, params *url.Values) *errortools.Err
 	return nil
 }
 
+func (service *Service) getToken(url string, params *url.Values) *errortools.Error {
+	var request *http.Request = nil
+
+	if service.tokenHttpMethod == http.MethodGet {
+		if params != nil {
+			if len(*params) > 0 {
+				url = fmt.Sprintf("%s?%s", url, (*params).Encode())
+			}
+		}
+
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
+		if err != nil {
+			return errortools.ErrorMessage(err)
+		}
+
+		request = req
+	} else if service.tokenHttpMethod == http.MethodPost {
+
+		encoded := ""
+		body := new(strings.Reader)
+		if params != nil {
+			encoded = params.Encode()
+			body = strings.NewReader(encoded)
+		}
+
+		req, err := http.NewRequest(http.MethodPost, url, body)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Content-Length", strconv.Itoa(len(encoded)))
+		req.Header.Set("Accept", "application/json")
+		if err != nil {
+			return errortools.ErrorMessage(err)
+		}
+
+		request = req
+	} else {
+		return errortools.ErrorMessagef("Invalid TokenHttpMethod: %s", service.tokenHttpMethod)
+	}
+
+	return service.getTokenFromRequest(request)
+}
+
 func (service *Service) GetTokenFromCode(r *http.Request, checkState *func(state string) *errortools.Error) *errortools.Error {
-	if service.getTokenFromCodeFunc != nil {
-		return (*service.getTokenFromCodeFunc)(r)
+	if service.getTokenFromRequestFunc != nil {
+		request, e := (*service.getTokenFromRequestFunc)(r)
+		if e != nil {
+			return e
+		}
+		return service.getTokenFromRequest(request)
 	}
 	return service.getTokenFromCode(r, checkState, true)
 }
