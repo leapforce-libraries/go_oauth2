@@ -381,12 +381,15 @@ func (service *Service) initTokenNeeded() *errortools.Error {
 	return errortools.ErrorMessage("No valid accesscode or refreshcode found. Please reconnect.")
 }
 
-func (service *Service) AuthorizeUrl(scope string, accessType *string, prompt *string, state *string) string {
+func (service *Service) AuthorizeUrl(scope *string, accessType *string, prompt *string, state *string) string {
 	params := url.Values{}
 	params.Set("redirect_uri", service.redirectUrl)
 	params.Set(service.clientIdName, service.clientId)
 	params.Set("response_type", "code")
-	params.Set("scope", scope)
+
+	if scope != nil {
+		params.Set("scope", *scope)
+	}
 
 	if accessType != nil {
 		params.Set("access_type", *accessType)
