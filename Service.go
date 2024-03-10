@@ -406,37 +406,6 @@ func (service *Service) AuthorizeUrl(scope *string, accessType *string, prompt *
 	return fmt.Sprintf("%s?%s", service.authUrl, params.Encode())
 }
 
-/*
-func (service *Service) InitToken(scope string, accessType *string, prompt *string, state *string) *errortools.Error {
-	if service == nil {
-		return errortools.ErrorMessage("Service variable is nil pointer")
-	}
-
-	fmt.Println("Go to this url to get new access token:")
-	fmt.Println()
-	fmt.Println(service.AuthorizeUrl(scope, accessType, prompt, state))
-	fmt.Println()
-
-	// Create a new redirect route
-	http.HandleFunc("/oauth/redirect", func(w http.ResponseWriter, r *http.Request) {
-		//
-		// get authorization code
-		//
-		e := service.GetTokenFromCode(r)
-		if e != nil {
-			errortools.CaptureError(e)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		w.WriteHeader(http.StatusFound)
-	})
-
-	http.ListenAndServe(":8080", nil)
-
-	return nil
-}*/
-
 // HttpRequest returns http.Response for generic oAuth2 http call
 func (service *Service) HttpRequest(requestConfig *go_http.RequestConfig) (*http.Request, *http.Response, *errortools.Error) {
 	return service.httpRequest(requestConfig, false)
