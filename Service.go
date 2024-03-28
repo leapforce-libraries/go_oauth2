@@ -207,7 +207,7 @@ func (service *Service) getToken(url string, params *url.Values) *errortools.Err
 	return service.getTokenFromRequest(request)
 }
 
-func (service *Service) GetTokenFromCode(r *http.Request, checkState *func(state string) *errortools.Error) *errortools.Error {
+func (service *Service) GetTokenFromCode(r *http.Request, extraData *url.Values, checkState *func(state string) *errortools.Error) *errortools.Error {
 	if service.getTokenFromRequestFunc != nil {
 		request, e := (*service.getTokenFromRequestFunc)(r)
 		if e != nil {
@@ -215,14 +215,14 @@ func (service *Service) GetTokenFromCode(r *http.Request, checkState *func(state
 		}
 		return service.getTokenFromRequest(request)
 	}
-	return service.getTokenFromCode(r, checkState, true)
+	return service.getTokenFromCode(r, extraData, checkState, true)
 }
 
-func (service *Service) GetTokenFromCodeWithoutRedirectUri(r *http.Request, checkState *func(state string) *errortools.Error) *errortools.Error {
-	return service.getTokenFromCode(r, checkState, false)
+func (service *Service) GetTokenFromCodeWithoutRedirectUri(r *http.Request, extraData *url.Values, checkState *func(state string) *errortools.Error) *errortools.Error {
+	return service.getTokenFromCode(r, extraData, checkState, false)
 }
 
-func (service *Service) getTokenFromCode(r *http.Request, checkState *func(state string) *errortools.Error, includeRedirectUri bool) *errortools.Error {
+func (service *Service) getTokenFromCode(r *http.Request, extraData *url.Values, checkState *func(state string) *errortools.Error, includeRedirectUri bool) *errortools.Error {
 	err := r.ParseForm()
 	if err != nil {
 		return errortools.ErrorMessage(err)
@@ -242,6 +242,9 @@ func (service *Service) getTokenFromCode(r *http.Request, checkState *func(state
 	}
 
 	data := url.Values{}
+	if extraData != nil {
+		data = *extraData
+	}
 	data.Set(service.clientIdName, service.clientId)
 	data.Set("client_secret", service.clientSecret)
 	data.Set("code", code)
