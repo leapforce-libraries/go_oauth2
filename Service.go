@@ -227,7 +227,7 @@ func (service *Service) GetTokenFromCodeWithoutRedirectUri(r *http.Request, chec
 }
 
 func (service *Service) GetTokenFromCodeWithData(r *http.Request, extraData *url.Values, checkState *func(state string) *errortools.Error) *errortools.Error {
-	return service.getTokenFromCode(r, extraData, checkState, false)
+	return service.getTokenFromCode(r, extraData, checkState, true)
 }
 
 func (service *Service) getTokenFromCode(r *http.Request, extraData *url.Values, checkState *func(state string) *errortools.Error, includeRedirectUri bool) *errortools.Error {
