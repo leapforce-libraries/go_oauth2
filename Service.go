@@ -99,6 +99,10 @@ func NewService(serviceConfig *ServiceConfig) (*Service, *errortools.Error) {
 	}, nil
 }
 
+func (service *Service) SetTokenSource(tokenSource tokensource.TokenSource) {
+	service.tokenSource = tokenSource
+}
+
 func (*Service) lockToken() {
 	tokenMutex.Lock()
 }
