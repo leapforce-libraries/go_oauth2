@@ -207,7 +207,7 @@ func (service *Service) getToken(url string, params *url.Values) *errortools.Err
 	return service.getTokenFromRequest(request)
 }
 
-func (service *Service) GetTokenFromCode(r *http.Request, extraData *url.Values, checkState *func(state string) *errortools.Error) *errortools.Error {
+func (service *Service) GetTokenFromCode(r *http.Request, checkState *func(state string) *errortools.Error) *errortools.Error {
 	if service.getTokenFromRequestFunc != nil {
 		request, e := (*service.getTokenFromRequestFunc)(r)
 		if e != nil {
@@ -215,10 +215,14 @@ func (service *Service) GetTokenFromCode(r *http.Request, extraData *url.Values,
 		}
 		return service.getTokenFromRequest(request)
 	}
-	return service.getTokenFromCode(r, extraData, checkState, true)
+	return service.getTokenFromCode(r, nil, checkState, true)
 }
 
-func (service *Service) GetTokenFromCodeWithoutRedirectUri(r *http.Request, extraData *url.Values, checkState *func(state string) *errortools.Error) *errortools.Error {
+func (service *Service) GetTokenFromCodeWithoutRedirectUri(r *http.Request, checkState *func(state string) *errortools.Error) *errortools.Error {
+	return service.getTokenFromCode(r, nil, checkState, false)
+}
+
+func (service *Service) GetTokenFromCodeWithData(r *http.Request, extraData *url.Values, checkState *func(state string) *errortools.Error) *errortools.Error {
 	return service.getTokenFromCode(r, extraData, checkState, false)
 }
 
